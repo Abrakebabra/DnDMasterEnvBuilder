@@ -1,5 +1,6 @@
 import os
 import tkinter as tk
+import functools
 # import vlc
 # import yeelight
 
@@ -92,6 +93,7 @@ class Display():
     def __init__(self):
         self.f = dict()
         self.c = dict()
+        self.b = dict()
 
     def newFrCan(self, xPos, yPos, w, h, col, pane="default"):
         global root
@@ -112,8 +114,11 @@ class Display():
     def text(self, x, y, words, col, pane="default"):
         self.c[pane].create_text(x, y, text=words, fill=col)
 
-    def button(self):
-        pass
+    def panelButton(self, xPos, yPos, words, hlbg, action, pane="default"):
+        self.b.update({words: tk.Button(self.c[pane], text=words,
+                       highlightbackground=hlbg, command=action)})
+        self.b[words].place(x=xPos, y=yPos)
+        self.b[words].config(width=8)
 
     @classmethod
     def windowClosed(cls):
@@ -121,19 +126,30 @@ class Display():
         root.destroy()
 
 
-def createMultiPanel(source, output, x, y, w, h, col):
+def multiPanel(source, output, x, y, w, h, col):
     for i in range(0, len(source)):
-        output.newFrCan(x, y, w, h, col, str(source[i][0]["panel"]))
+        if len(source[i]) > 0:
+            output.newFrCan(x, y, w, h, col, str(source[i][0]["panel"]))
 
 
-def createMultiTextLabels(source, output, x, y, col):
+def multiTextLabels(source, output, x, y, col):
     for i in range(0, len(source)):
-        output.text(x, y, str(source[i][0]["panel"]),
-                    col, str(source[i][0]["panel"]))
+        if len(source[i]) > 0:
+            output.text(x, y, str(source[i][0]["panel"]),
+                        col, str(source[i][0]["panel"]))
+
+
+def multiMenuButtons(source, output):
+    for i in range(0, len(source.f.keys())):
+        frameKey = [key for key in source.f.keys()][i]
+        output.panelButton(8 + 90 * i, 24,
+                           frameKey, "red",
+                           functools.partial(source.raiseFrame,
+                                             source.f, frameKey))
 
 
 top = Display()
-top.newFrCan(0, 0, sW, space * 6, "grey")
+top.newFrCan(0, 0, sW, space * 5, "grey")
 
 top.text(50, 25, "Title?", "yellow")
 
@@ -147,26 +163,34 @@ top.rect(0, space * 4, sW, space, "pink")
 top.text(50, space * 4 + space / 2, "Events", "blue")
 
 
+musicBar = Display()
+musicBar.newFrCan(0, space * 5, sW * 0.2, space, "coral")
+
 musicPanel = Display()
-createMultiPanel(Media.music, musicPanel,
+multiPanel(Media.music, musicPanel,
                  0, space * 6,
                  sW * 0.2, sH - space * 6,
                  "orange")
 
-createMultiTextLabels(Media.music, musicPanel, 50, 50, "black")
+multiMenuButtons(musicPanel, musicBar)
+multiTextLabels(Media.music, musicPanel, 50, 50, "black")
 
+
+soundBar = Display()
+soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
 
 soundPanel = Display()
-createMultiPanel(Media.sounds, soundPanel,
+multiPanel(Media.sounds, soundPanel,
                  sW * 0.2, space * 6,
                  sW * 0.6, sH - space * 6,
                  "pink")
 
-createMultiTextLabels(Media.sounds, soundPanel, 50, 50, "black")
+multiMenuButtons(soundPanel, soundBar)
+multiTextLabels(Media.sounds, soundPanel, 50, 50, "black")
 
 
-soundPanel.raiseFrame(soundPanel.f, "Forest")
-
+effectsBar = Display()
+effectsBar.newFrCan(sW * 0.8, space * 5, sW * 0.2, space, "light coral")
 
 effects = Display()
 effects.newFrCan(sW * 0.8, space * 6,
@@ -187,11 +211,3 @@ effects.text(50, 50, "Effects", "black")
 
 root.protocol("WM_DELETE_WINDOW", Display.windowClosed)
 root.mainloop()
-
-
-
-
-#tkinter.Button(f1, text="Dsp Frame 2", highlightbackground="pink", command=lambda: raiseFrame(f2)).place(x=200, y=150)
-#tkinter.Button(d2, text="Dsp Frame 1", highlightbackground="grey", command=lambda: raiseFrame(f1)).place(x=200, y=150)
-#tkinter.Button(d3, text="Dsp Frame 3", highlightbackground="yellow", command=lambda: raiseFrame(f4)).place(x=200, y=150)
-#tkinter.Button(d4, text="Dsp Frame 4", highlightbackground="orange", command=lambda: raiseFrame(f3)).place(x=200, y=150)
