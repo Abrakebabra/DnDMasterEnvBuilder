@@ -1,17 +1,22 @@
 import os
 import tkinter as tk
 import functools
-# import vlc
+import vlc
+import time  # code runs faster than vlc
 # import yeelight
 
 
 class Media():
-    music = list()
-    sounds = list()
-    effects = list()
 
-    @classmethod
-    def getMedia(cls, inputDir, varList):
+    def __init__(self):
+        # mimics the structure of directories and files to create the
+        # panels and buttons.
+        self.music = list()
+        self.sounds = list()
+        self.effects = list()
+        self.genID = 0
+
+    def getMedia(self, inputDir, varList):
         items = os.listdir(inputDir)
         subDirs = list()
 
@@ -30,7 +35,10 @@ class Media():
                     trackName = j[:-4]
                     panelGroup.append({"panel": str(subDir),
                                        "track": str(trackName),
-                                       "path": str(fullPath)})
+                                       "path": str(fullPath),
+                                       "trackID": str(self.genID)})
+                self.genID += 1
+
             varList.append(panelGroup)
 
         if len(subDirs) > 0:
@@ -42,8 +50,7 @@ class Media():
         else:
             storeInfo(inputDir, items, "No Panel")
 
-    @classmethod
-    def printList(cls, var):
+    def printList(self, var):
         for i in range(0, len(var)):
             print("\n" + str(var[i][0]["panel"]) + ":")
             for j in range(0, len(var[i])):
@@ -53,24 +60,159 @@ class Media():
 
 
 media = Media()
-media.getMedia("CoreMusic", Media.music)
-media.getMedia("CoreSounds", Media.sounds)
-media.getMedia("CoreEffects", Media.effects)
+media.getMedia("CoreMusic", media.music)
+media.getMedia("CoreSounds", media.sounds)
+media.getMedia("CoreEffects", media.effects)
 
 
 class Audio():
-    pass
+    # later:  Convert tracks to trackID so same names across panels can be used
+
+    def __init__(self):
+        self.active = list()  # Holds list of active tracks
+
+        self.music = list()  # Holds "path": vlc.MediaPlayer(path)
+        self.sounds = list()  # Holds "path": vlc.MediaPlayer(path)
+        self.effects = list()  # Holds "path": vlc.MediaPlayer(path)
+
+    def audioLoader(self, MediaAudio, varList):
+        for i in range(0, len(MediaAudio)):
+            for j in range(0, len(MediaAudio[i])):
+                ma = MediaAudio[i][j]
+                track = dict()
+
+                track.update({"panel": ma["panel"],
+                              "track": ma["track"],
+                              "trackID": ma["trackID"],
+                              ma["track"]: vlc.MediaPlayer(ma["path"])})
+
+                varList.append(track)
+
+    def play(self, audioList, track, vol=100):
+
+        def handleTrack():
+            for i in range(0, len(audioList)):
+                if audioList[i]["track"] == track:
+                    self.active.append({"panel": audioList[i]["panel"],
+                                        "audioList": str(audioList),
+                                        "track": audioList[i]["track"],
+                                        "trackID": audioList[i]["trackID"]})
+
+                    audioList[i][track].play()
+                    time.sleep(0.01)  # code runs faster than vlc
+                    audioList[i][track].audio_set_volume(vol)
+
+        if len(self.active) > 0:
+            found = False
+            for i in range(0, len(self.active)):
+                if self.active[i]["track"] == track:
+                    found = True
+
+            if found is True:
+                return
+            else:
+                handleTrack()
+        else:
+            handleTrack()
+
+    def stop(self, audioList, track, panel=None):
+        for i in range(0, len(audioList)):
+            if audioList[i]["track"] == track:
+                audioList[i][track].stop()
+
+            for i in range(0, len(self.active)):
+                if self.active[i]["track"] == track:
+                    self.active.pop(i)
+                    break
+
+    def volume(self, audioList, track, volUpDown):
+
+        def volUp(trackObj):
+            currentVol = trackObj.audio_get_volume()
+            newVol = currentVol + 10
+            if newVol <= 100:
+                trackObj.audio_set_volume(newVol)
+            else:
+                trackObj.audio_set_volume(100)
+
+        def volDown(trackObj):
+            currentVol = trackObj.audio_get_volume()
+            newVol = currentVol - 10
+            if newVol >= 0:
+                trackObj.audio_set_volume(newVol)
+            else:
+                trackObj.audio_set_volume(0)
+
+        for i in range(0, len(audioList)):
+            if audioList[i]["track"] == track:
+                if volUpDown == "up":
+                    volUp(audioList[i][track])
+                elif volUpDown == "down":
+                    volDown(audioList[i][track])
+
+    def stopAll(self):
+        
+        stopList = list()
+        
+        for i in range(0, len(self.active)):
+            stopList.append(self.active[i])
+            
+        for i in range(0, len(stopList)):
+            track = stopList[i]["track"]
+            audioList = stopList[i]["audioList"]
+
+            if str(self.music) == audioList:
+                self.stop(self.music, track)
+            elif str(self.sounds) == audioList:
+                self.stop(self.sounds, track)
+            elif str(self.effects) == audioList:
+                self.stop(self.effects, track)
+
+
+audio = Audio()
+audio.audioLoader(media.music, audio.music)
+audio.audioLoader(media.sounds, audio.sounds)
+audio.audioLoader(media.effects, audio.effects)
+
+
+class TestAudio():
+
+    def __init__(self, track="Build 1"):
+        self.track = track
+
+    def play(self):
+        audio.play(audio.music, self.track)
+
+    def stop(self):
+        audio.stop(audio.music, self.track)
+
+    def volup(self):
+        audio.volume(audio.music, self.track, "up")
+
+    def voldown(self):
+        audio.volume(audio.music, self.track, "down")
+
+    def getvol(self):
+        for i in range(0, len(audio.music)):
+            if audio.music[i]["track"] == self.track:
+                print(str(audio.music[i][self.track].audio_get_volume()))
+
+    def multistart(self):
+        audio.play(audio.music, "02 Jojo")
+        audio.play(audio.music, "Build 1")
+        audio.play(audio.sounds, "Latin 2")
+
+    def stopall(self):
+        audio.stopAll()
 
 
 class Lights():
-    pass
+
+    def __init__(self):
+        pass
 
 
 class Presets():
-    pass
-
-
-class ActiveData():
     pass
 
 
@@ -120,6 +262,8 @@ class Display():
         self.b[words].place(x=xPos, y=yPos)
         self.b[words].config(width=8)
 
+    #def trackCtrl(self, xPos, yPos, track, audioObj,)
+
     @classmethod
     def windowClosed(cls):
         global root
@@ -167,26 +311,26 @@ musicBar = Display()
 musicBar.newFrCan(0, space * 5, sW * 0.2, space, "coral")
 
 musicPanel = Display()
-multiPanel(Media.music, musicPanel,
+multiPanel(media.music, musicPanel,
                  0, space * 6,
                  sW * 0.2, sH - space * 6,
                  "orange")
 
 multiMenuButtons(musicPanel, musicBar)
-multiTextLabels(Media.music, musicPanel, 50, 50, "black")
+multiTextLabels(media.music, musicPanel, 50, 50, "black")
 
 
 soundBar = Display()
 soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
 
 soundPanel = Display()
-multiPanel(Media.sounds, soundPanel,
+multiPanel(media.sounds, soundPanel,
                  sW * 0.2, space * 6,
                  sW * 0.6, sH - space * 6,
                  "pink")
 
 multiMenuButtons(soundPanel, soundBar)
-multiTextLabels(Media.sounds, soundPanel, 50, 50, "black")
+multiTextLabels(media.sounds, soundPanel, 50, 50, "black")
 
 
 effectsBar = Display()
