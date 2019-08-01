@@ -3,6 +3,7 @@ import tkinter as tk  # gui
 import functools  # to pass a function with parameters into tkinter button
 import vlc  # audio
 import time  # code runs faster than vlc can load.  Adds 0.01s delay
+# import PIL  # for pictures
 # import yeelight  # lights
 
 
@@ -231,7 +232,22 @@ class Lights():
 
 
 class Presets():
-    pass
+
+    def __init__(self):
+        self.currentData = list()
+
+    def playCurrent(self):
+        pass
+
+    def clearCurrent(self):
+        pass
+
+    def savePreset(self):
+        # save, then re-scan file and re-fresh?
+        pass
+
+    def loadPreset(self):
+        pass
 
 
 root = tk.Tk()
@@ -302,12 +318,14 @@ class Display():
             boxWidth = (panelWidth - gap * 6) / 3
 
         panelHeight = sH - space * 6
-        boxHeight = (panelHeight - gap * 4) / 6
+        boxHeight = (panelHeight - gap * 9) / 6
 
-        panelButton = dict()  # holds current button dict info
+        panelElements = dict()  # holds current button dict info
 
-        self.rect(xPos, yPos, boxWidth, boxHeight, "red", panel)  # box
-        self.text(xPos + boxWidth * 0.5, yPos + 20, track, "black", panel)  # label what's playing
+        outline = self.rect(xPos, yPos, boxWidth, boxHeight,
+                            "red", panel)  # box outline
+        trackName = self.text(xPos + boxWidth * 0.5, yPos + 20,
+                              track, "black", panel)  # track
 
         def testFunc():
             print("yes")
@@ -352,11 +370,12 @@ class Display():
                         anchor="se")
         stopTrack.config(width=8)
 
-        panelButton.update({"Select": selectTrack, "Remove": removeTrack,
-                            "Vol Up": volUp, "Vol Down": volDown,
-                            "Play": playTrack, "Stop": stopTrack})
-        
-        self.controlBox.append(panelButton)
+        panelElements.update({"Outline": outline, "Track Name": trackName,
+                              "Select": selectTrack, "Remove": removeTrack,
+                              "Vol Up": volUp, "Vol Down": volDown,
+                              "Play": playTrack, "Stop": stopTrack})
+
+        self.controlBox.append(panelElements)
 
     @classmethod
     def windowClosed(cls):
@@ -385,6 +404,48 @@ def multiMenuButtons(source, output):
                            functools.partial(source.raiseFrame,
                                              source.f, frameKey))
 
+def multiControlBoxes(output, audInst, audioList):
+    global sW
+    global sH
+    global space
+
+    gap = 8
+    columnNumber = 0
+    rowNumber = 0
+
+    prevPanel = str()
+    panelHeight = sH - space * 6
+    boxHeight = (panelHeight - gap * 9) / 6
+
+    for i in range(0, len(audioList)):
+        currentPanel = audioList[i]["panel"]
+        if prevPanel != currentPanel:
+            columnNumber = 0
+            rowNumber = 0
+            prevPanel = currentPanel
+
+        if space + rowNumber * (boxHeight + space) + boxHeight > sH:
+            columnNumber += 1
+            rowNumber = 0
+
+        if currentPanel == "default":
+            panelWidth = sW * 0.2
+            boxWidth = panelWidth - gap * 2
+        else:
+            panelWidth = sW * 0.6
+            boxWidth = (panelWidth - gap * 6) / 3
+
+        xPosition = gap + columnNumber * (boxWidth + gap)
+        yPosition = gap * 2 + rowNumber * (boxHeight + gap)
+        track = audioList[i]["track"]
+        trackID = audioList[i]["trackID"]
+
+        output.trackCtrlBox(xPosition, yPosition, "red",
+                            track, trackID, audInst, audioList, currentPanel)
+
+        rowNumber += 1
+
+
 
 top = Display()
 top.newFrCan(0, 0, sW, space * 5, "grey")
@@ -411,8 +472,8 @@ multiPanel(media.music, musicPanel,
            "orange")
 
 multiMenuButtons(musicPanel, musicBar)
-multiTextLabels(media.music, musicPanel, 50, 50, "black")
-
+multiTextLabels(media.music, musicPanel, 50, 8, "black")
+multiControlBoxes(musicPanel, audio, audio.music)
 
 soundBar = Display()
 soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
@@ -424,8 +485,8 @@ multiPanel(media.sounds, soundPanel,
            "pink")
 
 multiMenuButtons(soundPanel, soundBar)
-multiTextLabels(media.sounds, soundPanel, 50, 50, "black")
-
+multiTextLabels(media.sounds, soundPanel, 50, 8, "black")
+multiControlBoxes(soundPanel, audio, audio.sounds)
 
 effectsBar = Display()
 effectsBar.newFrCan(sW * 0.8, space * 5, sW * 0.2, space, "light coral")
@@ -434,14 +495,15 @@ effects = Display()
 effects.newFrCan(sW * 0.8, space * 6,
                  sW * 0.2, sH - space * 6, "orange")
 
-effects.text(50, 50, "Effects", "black")
+effects.text(50, 8, "Effects", "black")
+#multiControlBoxes(effects, audio, audio.effects)
 
 
 #soundPanel.trackCtrlBox(5, 5, "test", "test", "test", panel="Cave")
 #musicPanel.trackCtrlBox(5, 5, "test", "test", "test", panel="Battle")
 #effects.trackCtrlBox(5, 5, "test", "test", "test", panel="default")
 #soundPanel.trackCtrlBox(5, 5, "track", "0", "red", audio.sounds, "Cave")
-musicPanel.trackCtrlBox(5, 5, "red", "Unknown Track", "0", audio, audio.music, panel="Battle")
+#musicPanel.trackCtrlBox(8, 8, "red", "Unknown Track", "0", audio, audio.music, panel="Battle")
 
 
 
