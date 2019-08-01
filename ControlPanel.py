@@ -1,9 +1,9 @@
-import os
-import tkinter as tk
-import functools
-import vlc
-import time  # code runs faster than vlc
-# import yeelight
+import os  # to access local files
+import tkinter as tk  # gui
+import functools  # to pass a function with parameters into tkinter button
+import vlc  # audio
+import time  # code runs faster than vlc can load.  Adds 0.01s delay
+# import yeelight  # lights
 
 
 class Media():
@@ -99,8 +99,10 @@ class Audio():
                                         "track": trackObj["track"],
                                         "trackID": trackObj["trackID"]})
 
+                    trackObj[trackID].stop()
+                    time.sleep(0.01)  # code runs faster than vlc can load
                     trackObj[trackID].play()
-                    time.sleep(0.01)  # code runs faster than vlc
+                    time.sleep(0.01)  # code runs faster than vlc can load
                     trackObj[trackID].audio_set_volume(trackObj["volume"])
 
         if len(self.active) > 0:
@@ -116,7 +118,7 @@ class Audio():
         else:
             handleTrack()
 
-    def stop(self, audioList, trackID, panel=None):
+    def stop(self, audioList, trackID):
         for i in range(0, len(audioList)):
             if audioList[i]["trackID"] == trackID:
                 audioList[i][trackID].stop()
@@ -221,6 +223,7 @@ class TestAudio():
 
 test = TestAudio()
 
+
 class Lights():
 
     def __init__(self):
@@ -248,37 +251,112 @@ root.geometry("%dx%d+%d+%d" % (sW, sH, sX, sY))
 class Display():
 
     def __init__(self):
-        self.f = dict()
-        self.c = dict()
-        self.b = dict()
+        self.f = dict()  # frames are all unique so no need for list
+        self.c = dict()  # canvases are all unique so no need for list
+        self.pb = dict()  # buttons are all unique so no need for list
+        self.ab = list()  # may have identical names so list required
+        self.controlBox = list()  # holds each track control box
 
-    def newFrCan(self, xPos, yPos, w, h, col, pane="default"):
+    def newFrCan(self, xPos, yPos, w, h, col, panel="default"):
         global root
 
-        self.f.update({pane: tk.Frame(root, width=w, height=h, bg=col)})
-        self.f[pane].place(x=xPos, y=yPos)
+        self.f.update({panel: tk.Frame(root, width=w, height=h, bg=col)})
+        self.f[panel].place(x=xPos, y=yPos)
 
-        self.c.update({pane: tk.Canvas(self.f[pane], width=w, height=h,
+        self.c.update({panel: tk.Canvas(self.f[panel], width=w, height=h,
                       bg=col, highlightthickness=0)})
-        self.c[pane].place(x=0, y=0)
+        self.c[panel].place(x=0, y=0)
 
-    def raiseFrame(self, frame, pane="default"):
-        frame[pane].tkraise()
+    def raiseFrame(self, frame, panel="default"):
+        frame[panel].tkraise()
 
-    def rect(self, x, y, w, h, col, pane="default"):
-        self.c[pane].create_rectangle(x, y, x + w, y + h, fill=col, width=0)
+    def rect(self, x, y, w, h, col, panel="default"):
+        self.c[panel].create_rectangle(x, y, x + w, y + h, fill=col, width=0)
 
-    def text(self, x, y, words, col, pane="default"):
-        self.c[pane].create_text(x, y, text=words, fill=col)
+    def text(self, x, y, words, col, panel="default"):
+        self.c[panel].create_text(x, y, text=words, fill=col)
 
-    def panelButton(self, xPos, yPos, words, hlbg, action, pane="default"):
-        self.b.update({words: tk.Button(self.c[pane], text=words,
-                       highlightbackground=hlbg, command=action)})
-        self.b[words].place(x=xPos, y=yPos)
-        self.b[words].config(width=8)
+    def btn(self, panel, words, hlbg, action):
+        # Wrapper to shorten button create method
+        return tk.Button(self.c[panel], text=words,
+                         highlightbackground=hlbg, command=action)
 
-    def trackCtrl(self, xPos, yPos, track, trackid, audioObj):
-        pass
+    def panelButton(self, xPos, yPos, words, hlbg, action, panel="default"):
+        self.pb.update({words: self.btn(panel, words, hlbg, action)})
+        self.pb[words].place(x=xPos, y=yPos)
+        self.pb[words].config(width=8)
+
+    def trackCtrlBox(self,
+                     xPos, yPos, hlbg,
+                     track, trackID, audInst, audioList, panel="default"):
+        global sW
+        global sH
+        global space
+
+        gap = 8
+        if panel == "default":
+            panelWidth = sW * 0.2
+            boxWidth = panelWidth - gap * 2
+        else:
+            panelWidth = sW * 0.6
+            boxWidth = (panelWidth - gap * 6) / 3
+
+        panelHeight = sH - space * 6
+        boxHeight = (panelHeight - gap * 4) / 6
+
+        panelButton = dict()  # holds current button dict info
+
+        self.rect(xPos, yPos, boxWidth, boxHeight, "red", panel)  # box
+        self.text(xPos + boxWidth * 0.5, yPos + 20, track, "black", panel)  # label what's playing
+
+        def testFunc():
+            print("yes")
+
+        selectTrack = self.btn(panel, "Select", hlbg,
+                               testFunc)
+        selectTrack.place(x=xPos + boxWidth * 0.02, y=yPos + boxHeight * 0.7,
+                          anchor="sw")
+        selectTrack.config(width=8)
+
+        removeTrack = self.btn(panel, "Remove", hlbg,
+                               testFunc)
+        removeTrack.place(x=xPos + boxWidth * 0.02, y=yPos + boxHeight * 0.98,
+                          anchor="sw")
+        removeTrack.config(width=8)
+
+        volUp = self.btn(panel, "Vol Up", hlbg,
+                         functools.partial(audInst.volume,
+                                           audioList, trackID, "up"))
+        volUp.place(x=xPos + boxWidth * 0.3, y=yPos + boxHeight * 0.7,
+                    anchor="sw")
+        volUp.config(width=8)
+
+        volDown = self.btn(panel, "Vol Down", hlbg,
+                           functools.partial(audInst.volume,
+                                             audioList, trackID, "down"))
+        volDown.place(x=xPos + boxWidth * 0.3, y=yPos + boxHeight * 0.98,
+                      anchor="sw")
+        volDown.config(width=8)
+
+        playTrack = self.btn(panel, "Play", hlbg,
+                             functools.partial(audInst.play,
+                                               audioList, trackID))
+        playTrack.place(x=xPos + boxWidth * 0.98, y=yPos + boxHeight * 0.7,
+                        anchor="se")
+        playTrack.config(width=8)
+
+        stopTrack = self.btn(panel, "Stop", hlbg,
+                             functools.partial(audInst.stop,
+                                               audioList, trackID))
+        stopTrack.place(x=xPos + boxWidth * 0.98, y=yPos + boxHeight * 0.98,
+                        anchor="se")
+        stopTrack.config(width=8)
+
+        panelButton.update({"Select": selectTrack, "Remove": removeTrack,
+                            "Vol Up": volUp, "Vol Down": volDown,
+                            "Play": playTrack, "Stop": stopTrack})
+        
+        self.controlBox.append(panelButton)
 
     @classmethod
     def windowClosed(cls):
@@ -328,9 +406,9 @@ musicBar.newFrCan(0, space * 5, sW * 0.2, space, "coral")
 
 musicPanel = Display()
 multiPanel(media.music, musicPanel,
-                 0, space * 6,
-                 sW * 0.2, sH - space * 6,
-                 "orange")
+           0, space * 6,
+           sW * 0.2, sH - space * 6,
+           "orange")
 
 multiMenuButtons(musicPanel, musicBar)
 multiTextLabels(media.music, musicPanel, 50, 50, "black")
@@ -341,9 +419,9 @@ soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
 
 soundPanel = Display()
 multiPanel(media.sounds, soundPanel,
-                 sW * 0.2, space * 6,
-                 sW * 0.6, sH - space * 6,
-                 "pink")
+           sW * 0.2, space * 6,
+           sW * 0.6, sH - space * 6,
+           "pink")
 
 multiMenuButtons(soundPanel, soundBar)
 multiTextLabels(media.sounds, soundPanel, 50, 50, "black")
@@ -359,11 +437,11 @@ effects.newFrCan(sW * 0.8, space * 6,
 effects.text(50, 50, "Effects", "black")
 
 
-
-
-
-
-
+#soundPanel.trackCtrlBox(5, 5, "test", "test", "test", panel="Cave")
+#musicPanel.trackCtrlBox(5, 5, "test", "test", "test", panel="Battle")
+#effects.trackCtrlBox(5, 5, "test", "test", "test", panel="default")
+#soundPanel.trackCtrlBox(5, 5, "track", "0", "red", audio.sounds, "Cave")
+musicPanel.trackCtrlBox(5, 5, "red", "Unknown Track", "0", audio, audio.music, panel="Battle")
 
 
 
