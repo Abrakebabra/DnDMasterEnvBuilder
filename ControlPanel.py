@@ -85,7 +85,7 @@ class Audio():
                                  "track": ma["track"],
                                  "trackID": ma["trackID"],
                                  "volume": 100,
-                                 ma["trackID"]: vlc.MediaPlayer(ma["path"])})
+                                 "vlcObj": vlc.MediaPlayer(ma["path"])})
 
                 varList.append(trackObj)
 
@@ -98,13 +98,14 @@ class Audio():
                     self.active.append({"panel": trackObj["panel"],
                                         "audioList": audioList,
                                         "track": trackObj["track"],
-                                        "trackID": trackObj["trackID"]})
+                                        "trackID": trackObj["trackID"],
+                                        "vlcObj": trackObj["vlcObj"]})
 
-                    trackObj[trackID].stop()
+                    trackObj["vlcObj"].stop()
                     time.sleep(0.01)  # code runs faster than vlc can load
-                    trackObj[trackID].play()
+                    trackObj["vlcObj"].play()
                     time.sleep(0.01)  # code runs faster than vlc can load
-                    trackObj[trackID].audio_set_volume(trackObj["volume"])
+                    trackObj["vlcObj"].audio_set_volume(trackObj["volume"])
 
         if len(self.active) > 0:
             found = False
@@ -120,42 +121,39 @@ class Audio():
             handleTrack()
 
     def stop(self, audioList, trackID):
-        for i in range(0, len(audioList)):
-            if audioList[i]["trackID"] == trackID:
-                audioList[i][trackID].stop()
-
-            for i in range(0, len(self.active)):
-                if self.active[i]["trackID"] == trackID:
-                    self.active.pop(i)
-                    break
+        for i in range(0, len(self.active)):
+            if self.active[i]["trackID"] == trackID:
+                self.active[i]["vlcObj"].stop()
+                self.active.pop(i)
+                break
 
     def volume(self, audioList, trackID, volUpDown):
 
         def volUp(trackObj):
             currentVol = trackObj["volume"]
             newVol = currentVol + 10
-            trackPlaying = trackObj[trackID].get_state() == vlc.State.Playing
+            trackPlaying = trackObj["vlcObj"].get_state() == vlc.State.Playing
 
             if newVol <= 100:
                 trackObj.update({"volume": newVol})
                 if trackPlaying:
-                    trackObj[trackID].audio_set_volume(trackObj["volume"])
+                    trackObj["vlcObj"].audio_set_volume(trackObj["volume"])
             else:
                 if trackPlaying:
-                    trackObj[trackID].audio_set_volume(100)
+                    trackObj["vlcObj"].audio_set_volume(100)
 
         def volDown(trackObj):
             currentVol = trackObj["volume"]
             newVol = currentVol - 10
-            trackPlaying = trackObj[trackID].get_state() == vlc.State.Playing
+            trackPlaying = trackObj["vlcObj"].get_state() == vlc.State.Playing
 
             if newVol >= 0:
                 trackObj.update({"volume": newVol})
                 if trackPlaying:
-                    trackObj[trackID].audio_set_volume(newVol)
+                    trackObj["vlcObj"].audio_set_volume(newVol)
             else:
                 if trackPlaying:
-                    trackObj[trackID].audio_set_volume(0)
+                    trackObj["vlcObj"].audio_set_volume(0)
 
         for i in range(0, len(audioList)):
             if audioList[i]["trackID"] == trackID:
@@ -181,6 +179,24 @@ class Audio():
                 self.stop(self.sounds, trackID)
             elif self.effects == audioList:
                 self.stop(self.effects, trackID)
+
+    def statusCheck(self):
+        checkList = list()
+
+        for i in range(0, len(self.active)):
+            checkList.append(self.active[i])
+
+        for i in range(0, len(checkList)):
+            trackObj = checkList[i]
+            state = trackObj["vlcObj"].get_state()
+
+            if state == vlc.State.Ended:
+                if trackObj["panel"] == "No Panel":
+                    self.stop(trackObj["audioList"], trackObj["trackID"])
+                else:
+                    trackObj["vlcObj"].stop()
+                    time.sleep(0.01)
+                    trackObj["vlcObj"].play()
 
 
 audio = Audio()
@@ -273,7 +289,7 @@ class Display():
         self.ab = list()  # may have identical names so list required
         self.controlBox = list()  # holds each track control box
 
-    def newFrCan(self, xPos, yPos, w, h, col, panel="default"):
+    def newFrCan(self, xPos, yPos, w, h, col, panel="No Panel"):
         global root
 
         self.f.update({panel: tk.Frame(root, width=w, height=h, bg=col)})
@@ -283,13 +299,13 @@ class Display():
                       bg=col, highlightthickness=0)})
         self.c[panel].place(x=0, y=0)
 
-    def raiseFrame(self, frame, panel="default"):
+    def raiseFrame(self, frame, panel="No Panel"):
         frame[panel].tkraise()
 
-    def rect(self, x, y, w, h, col, panel="default"):
-        self.c[panel].create_rectangle(x, y, x + w, y + h, fill=col, width=0)
+    def rect(self, x, y, w, h, col, panel="No Panel"):
+        return self.c[panel].create_rectangle(x, y, x + w, y + h, fill=col, width=0)
 
-    def text(self, x, y, words, col, panel="default"):
+    def text(self, x, y, words, col, panel="No Panel"):
         self.c[panel].create_text(x, y, text=words, fill=col)
 
     def btn(self, panel, words, hlbg, action):
@@ -297,20 +313,22 @@ class Display():
         return tk.Button(self.c[panel], text=words,
                          highlightbackground=hlbg, command=action)
 
-    def panelButton(self, xPos, yPos, words, hlbg, action, panel="default"):
+    def panelButton(self, xPos, yPos, words, hlbg, action, panel="No Panel"):
         self.pb.update({words: self.btn(panel, words, hlbg, action)})
         self.pb[words].place(x=xPos, y=yPos)
         self.pb[words].config(width=8)
 
     def trackCtrlBox(self,
                      xPos, yPos, hlbg,
-                     track, trackID, audInst, audioList, panel="default"):
+                     track, trackID, vlcObj,
+                     audInst, audioList, panel="No Panel"):
+
         global sW
         global sH
         global space
 
         gap = 8
-        if panel == "default":
+        if panel == "No Panel":
             panelWidth = sW * 0.2
             boxWidth = panelWidth - gap * 2
         else:
@@ -373,9 +391,27 @@ class Display():
         panelElements.update({"Outline": outline, "Track Name": trackName,
                               "Select": selectTrack, "Remove": removeTrack,
                               "Vol Up": volUp, "Vol Down": volDown,
-                              "Play": playTrack, "Stop": stopTrack})
+                              "Play": playTrack, "Stop": stopTrack,
+                              "vlcObj": vlcObj, "panel": panel})
 
         self.controlBox.append(panelElements)
+
+    def isPlaying(self):
+        def object(panel, i, col):
+            self.c[panel].itemconfig(self.controlBox[i]["Outline"], fill=col)
+            self.controlBox[i]["Select"].config(highlightbackground=col)
+            self.controlBox[i]["Remove"].config(highlightbackground=col)
+            self.controlBox[i]["Vol Up"].config(highlightbackground=col)
+            self.controlBox[i]["Vol Down"].config(highlightbackground=col)
+            self.controlBox[i]["Play"].config(highlightbackground=col)
+            self.controlBox[i]["Stop"].config(highlightbackground=col)
+
+        for i in range(0, len(self.controlBox)):
+            panel = self.controlBox[i]["panel"]
+            if self.controlBox[i]["vlcObj"].get_state() == vlc.State.Playing:
+                object(panel, i, "green")
+            else:
+                object(panel, i, "red")
 
     @classmethod
     def windowClosed(cls):
@@ -428,7 +464,7 @@ def multiControlBoxes(output, audInst, audioList):
             columnNumber += 1
             rowNumber = 0
 
-        if currentPanel == "default":
+        if currentPanel == "No Panel":
             panelWidth = sW * 0.2
             boxWidth = panelWidth - gap * 2
         else:
@@ -439,9 +475,11 @@ def multiControlBoxes(output, audInst, audioList):
         yPosition = gap * 2 + rowNumber * (boxHeight + gap)
         track = audioList[i]["track"]
         trackID = audioList[i]["trackID"]
+        vlcObj = audioList[i]["vlcObj"]
 
         output.trackCtrlBox(xPosition, yPosition, "red",
-                            track, trackID, audInst, audioList, currentPanel)
+                            track, trackID, vlcObj,
+                            audInst, audioList, currentPanel)
 
         rowNumber += 1
 
@@ -496,18 +534,19 @@ effects.newFrCan(sW * 0.8, space * 6,
                  sW * 0.2, sH - space * 6, "orange")
 
 effects.text(50, 8, "Effects", "black")
-#multiControlBoxes(effects, audio, audio.effects)
-
-
-#soundPanel.trackCtrlBox(5, 5, "test", "test", "test", panel="Cave")
-#musicPanel.trackCtrlBox(5, 5, "test", "test", "test", panel="Battle")
-#effects.trackCtrlBox(5, 5, "test", "test", "test", panel="default")
-#soundPanel.trackCtrlBox(5, 5, "track", "0", "red", audio.sounds, "Cave")
-#musicPanel.trackCtrlBox(8, 8, "red", "Unknown Track", "0", audio, audio.music, panel="Battle")
+multiControlBoxes(effects, audio, audio.effects)
 
 
 
 
+def checkStatus():
+    audio.statusCheck()
+    musicPanel.isPlaying()
+    soundPanel.isPlaying()
+    effects.isPlaying()
+    root.after(200, checkStatus)
 
+
+root.after(200, checkStatus)
 root.protocol("WM_DELETE_WINDOW", Display.windowClosed)
 root.mainloop()
