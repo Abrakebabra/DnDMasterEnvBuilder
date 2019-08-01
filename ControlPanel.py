@@ -66,7 +66,6 @@ media.getMedia("CoreEffects", media.effects)
 
 
 class Audio():
-    # later:  Convert tracks to trackID so same names across panels can be used
 
     def __init__(self):
         self.active = list()  # Holds list of active tracks
@@ -79,33 +78,35 @@ class Audio():
         for i in range(0, len(MediaAudio)):
             for j in range(0, len(MediaAudio[i])):
                 ma = MediaAudio[i][j]
-                track = dict()
+                trackObj = dict()
 
-                track.update({"panel": ma["panel"],
-                              "track": ma["track"],
-                              "trackID": ma["trackID"],
-                              ma["track"]: vlc.MediaPlayer(ma["path"])})
+                trackObj.update({"panel": ma["panel"],
+                                 "track": ma["track"],
+                                 "trackID": ma["trackID"],
+                                 "volume": 100,
+                                 ma["trackID"]: vlc.MediaPlayer(ma["path"])})
 
-                varList.append(track)
+                varList.append(trackObj)
 
-    def play(self, audioList, track, vol=100):
+    def play(self, audioList, trackID):
 
         def handleTrack():
             for i in range(0, len(audioList)):
-                if audioList[i]["track"] == track:
-                    self.active.append({"panel": audioList[i]["panel"],
-                                        "audioList": str(audioList),
-                                        "track": audioList[i]["track"],
-                                        "trackID": audioList[i]["trackID"]})
+                if audioList[i]["trackID"] == trackID:
+                    trackObj = audioList[i]
+                    self.active.append({"panel": trackObj["panel"],
+                                        "audioList": audioList,
+                                        "track": trackObj["track"],
+                                        "trackID": trackObj["trackID"]})
 
-                    audioList[i][track].play()
+                    trackObj[trackID].play()
                     time.sleep(0.01)  # code runs faster than vlc
-                    audioList[i][track].audio_set_volume(vol)
+                    trackObj[trackID].audio_set_volume(trackObj["volume"])
 
         if len(self.active) > 0:
             found = False
             for i in range(0, len(self.active)):
-                if self.active[i]["track"] == track:
+                if self.active[i]["trackID"] == trackID:
                     found = True
 
             if found is True:
@@ -115,58 +116,68 @@ class Audio():
         else:
             handleTrack()
 
-    def stop(self, audioList, track, panel=None):
+    def stop(self, audioList, trackID, panel=None):
         for i in range(0, len(audioList)):
-            if audioList[i]["track"] == track:
-                audioList[i][track].stop()
+            if audioList[i]["trackID"] == trackID:
+                audioList[i][trackID].stop()
 
             for i in range(0, len(self.active)):
-                if self.active[i]["track"] == track:
+                if self.active[i]["trackID"] == trackID:
                     self.active.pop(i)
                     break
 
-    def volume(self, audioList, track, volUpDown):
+    def volume(self, audioList, trackID, volUpDown):
 
         def volUp(trackObj):
-            currentVol = trackObj.audio_get_volume()
+            currentVol = trackObj["volume"]
             newVol = currentVol + 10
+            trackPlaying = trackObj[trackID].get_state() == vlc.State.Playing
+
             if newVol <= 100:
-                trackObj.audio_set_volume(newVol)
+                trackObj.update({"volume": newVol})
+                if trackPlaying:
+                    trackObj[trackID].audio_set_volume(trackObj["volume"])
             else:
-                trackObj.audio_set_volume(100)
+                if trackPlaying:
+                    trackObj[trackID].audio_set_volume(100)
 
         def volDown(trackObj):
-            currentVol = trackObj.audio_get_volume()
+            currentVol = trackObj["volume"]
             newVol = currentVol - 10
+            trackPlaying = trackObj[trackID].get_state() == vlc.State.Playing
+
             if newVol >= 0:
-                trackObj.audio_set_volume(newVol)
+                trackObj.update({"volume": newVol})
+                if trackPlaying:
+                    trackObj[trackID].audio_set_volume(newVol)
             else:
-                trackObj.audio_set_volume(0)
+                if trackPlaying:
+                    trackObj[trackID].audio_set_volume(0)
 
         for i in range(0, len(audioList)):
-            if audioList[i]["track"] == track:
+            if audioList[i]["trackID"] == trackID:
                 if volUpDown == "up":
-                    volUp(audioList[i][track])
+                    volUp(audioList[i])
                 elif volUpDown == "down":
-                    volDown(audioList[i][track])
+                    volDown(audioList[i])
 
     def stopAll(self):
-        
+
         stopList = list()
-        
+
         for i in range(0, len(self.active)):
             stopList.append(self.active[i])
-            
+
         for i in range(0, len(stopList)):
-            track = stopList[i]["track"]
+            trackID = stopList[i]["trackID"]
             audioList = stopList[i]["audioList"]
 
-            if str(self.music) == audioList:
-                self.stop(self.music, track)
-            elif str(self.sounds) == audioList:
-                self.stop(self.sounds, track)
-            elif str(self.effects) == audioList:
-                self.stop(self.effects, track)
+            if self.music == audioList:
+                self.stop(self.music, trackID)
+            elif self.sounds == audioList:
+                self.stop(self.sounds, trackID)
+            elif self.effects == audioList:
+                self.stop(self.effects, trackID)
 
 
 audio = Audio()
@@ -177,34 +188,38 @@ audio.audioLoader(media.effects, audio.effects)
 
 class TestAudio():
 
-    def __init__(self, track="Build 1"):
-        self.track = track
+    def __init__(self, trackID="0"):
+        self.trackID = trackID
 
     def play(self):
-        audio.play(audio.music, self.track)
+        audio.play(audio.music, self.trackID)
 
     def stop(self):
-        audio.stop(audio.music, self.track)
-
-    def volup(self):
-        audio.volume(audio.music, self.track, "up")
-
-    def voldown(self):
-        audio.volume(audio.music, self.track, "down")
+        audio.stop(audio.music, self.trackID)
 
     def getvol(self):
         for i in range(0, len(audio.music)):
-            if audio.music[i]["track"] == self.track:
-                print(str(audio.music[i][self.track].audio_get_volume()))
+            if audio.music[i]["trackID"] == self.trackID:
+                print(str(audio.music[i]["volume"]))
 
-    def multistart(self):
-        audio.play(audio.music, "02 Jojo")
-        audio.play(audio.music, "Build 1")
-        audio.play(audio.sounds, "Latin 2")
+    def volup(self):
+        audio.volume(audio.music, self.trackID, "up")
+        self.getvol()
+
+    def voldown(self):
+        audio.volume(audio.music, self.trackID, "down")
+        self.getvol()
+
+    def startmulti(self):
+        audio.play(audio.music, "0")
+        audio.play(audio.music, "1")
+        audio.play(audio.sounds, "14")
 
     def stopall(self):
         audio.stopAll()
 
+
+test = TestAudio()
 
 class Lights():
 
@@ -262,7 +277,8 @@ class Display():
         self.b[words].place(x=xPos, y=yPos)
         self.b[words].config(width=8)
 
-    #def trackCtrl(self, xPos, yPos, track, audioObj,)
+    def trackCtrl(self, xPos, yPos, track, trackid, audioObj):
+        pass
 
     @classmethod
     def windowClosed(cls):
