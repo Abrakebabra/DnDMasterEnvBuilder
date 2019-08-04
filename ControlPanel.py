@@ -198,6 +198,25 @@ class Audio():
                     time.sleep(0.01)
                     trackObj["vlcObj"].play()
 
+    def selectTrack(self, audioList, trackID):
+        for i in range(0, len(audioList)):
+            if audioList[i]["trackID"] == trackID:
+                trackObj = audioList[i]
+                data = {"panel": trackObj["panel"],
+                        "audioList": audioList,
+                        "track": trackObj["track"],
+                        "trackID": trackObj["trackID"],
+                        "volume": trackObj["volume"]}
+
+                if data not in presets.currentData:
+                    presets.currentData.append(data)
+
+    def removeTrack(self, trackID):
+        for i in range(0, len(presets.currentData)):
+            if presets.currentData[i]["trackID"] == trackID:
+                presets.currentData.pop(i)
+                break
+
 
 audio = Audio()
 audio.audioLoader(media.music, audio.music)
@@ -253,7 +272,15 @@ class Presets():
         self.currentData = list()
 
     def playCurrent(self):
-        pass
+        for i in range(0, len(self.currentData)):
+            audioList = self.currentData[i]["audioList"]
+            trackID = self.currentData[i]["trackID"]
+            volume = self.currentData[i]["volume"]
+
+            for j in range(0, len(audioList)):
+                if audioList[j]["trackID"] == trackID:
+                    audioList[j].update({"volume": volume})
+                    audio.play(audioList, trackID)
 
     def clearCurrent(self):
         pass
@@ -264,6 +291,9 @@ class Presets():
 
     def loadPreset(self):
         pass
+
+
+presets = Presets()
 
 
 root = tk.Tk()
@@ -350,13 +380,15 @@ class Display():
             print("yes")
 
         selectTrack = self.btn(panel, "Select", hlbg,
-                               testFunc)
+                               functools.partial(audInst.selectTrack,
+                                                 audioList, trackID))
         selectTrack.place(x=xPos + boxWidth * 0.02, y=yPos + boxHeight * 0.7,
                           anchor="sw")
         selectTrack.config(width=8)
 
         removeTrack = self.btn(panel, "Remove", hlbg,
-                               testFunc)
+                               functools.partial(audInst.removeTrack,
+                                                 trackID))
         removeTrack.place(x=xPos + boxWidth * 0.02, y=yPos + boxHeight * 0.98,
                           anchor="sw")
         removeTrack.config(width=8)
@@ -390,6 +422,7 @@ class Display():
         stopTrack.config(width=8)
 
         panelElements.update({"Outline": outline, "Track Name": trackName,
+                              "trackID": trackID,
                               "Select": selectTrack, "Remove": removeTrack,
                               "Vol Up": volUp, "Vol Down": volDown,
                               "Play": playTrack, "Stop": stopTrack,
@@ -409,8 +442,23 @@ class Display():
 
         for i in range(0, len(self.controlBox)):
             panel = self.controlBox[i]["panel"]
-            if self.controlBox[i]["vlcObj"].get_state() == vlc.State.Playing:
+            statePlaying = self.controlBox[i]["vlcObj"].get_state() ==\
+                vlc.State.Playing
+
+            loaded = False
+
+            for j in range(0, len(presets.currentData)):
+                if presets.currentData[j]["trackID"] ==\
+                   self.controlBox[i]["trackID"]:
+                    loaded = True
+                    break
+
+            if statePlaying is True and loaded is True:
+                object(panel, i, "cyan")
+            elif statePlaying is True:
                 object(panel, i, "green")
+            elif loaded is True:
+                object(panel, i, "light blue")
             else:
                 object(panel, i, "red")
 
