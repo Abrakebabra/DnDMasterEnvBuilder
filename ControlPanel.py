@@ -191,7 +191,7 @@ class Audio():
             state = trackObj["vlcObj"].get_state()
 
             if state == vlc.State.Ended:
-                if trackObj["panel"] == "No Panel":
+                if "FX" in trackObj["panel"]:
                     self.stop(trackObj["audioList"], trackObj["trackID"])
                 else:
                     trackObj["vlcObj"].stop()
@@ -303,7 +303,8 @@ class Display():
         frame[panel].tkraise()
 
     def rect(self, x, y, w, h, col, panel="No Panel"):
-        return self.c[panel].create_rectangle(x, y, x + w, y + h, fill=col, width=0)
+        return self.c[panel].create_rectangle(x, y, x + w, y + h,
+                                              fill=col, width=0)
 
     def text(self, x, y, words, col, panel="No Panel"):
         self.c[panel].create_text(x, y, text=words, fill=col)
@@ -321,17 +322,17 @@ class Display():
     def trackCtrlBox(self,
                      xPos, yPos, hlbg,
                      track, trackID, vlcObj,
-                     audInst, audioList, panel="No Panel"):
+                     audInst, audioList, boxSize, panel="No Panel"):
 
         global sW
         global sH
         global space
 
         gap = 8
-        if panel == "No Panel":
+        if boxSize == "small":
             panelWidth = sW * 0.2
             boxWidth = panelWidth - gap * 2
-        else:
+        elif boxSize == "large":
             panelWidth = sW * 0.6
             boxWidth = (panelWidth - gap * 6) / 3
 
@@ -440,7 +441,8 @@ def multiMenuButtons(source, output):
                            functools.partial(source.raiseFrame,
                                              source.f, frameKey))
 
-def multiControlBoxes(output, audInst, audioList):
+
+def multiControlBoxes(output, audInst, audioList, boxSize):
     global sW
     global sH
     global space
@@ -479,10 +481,9 @@ def multiControlBoxes(output, audInst, audioList):
 
         output.trackCtrlBox(xPosition, yPosition, "red",
                             track, trackID, vlcObj,
-                            audInst, audioList, currentPanel)
+                            audInst, audioList, boxSize, currentPanel)
 
         rowNumber += 1
-
 
 
 top = Display()
@@ -511,7 +512,7 @@ multiPanel(media.music, musicPanel,
 
 multiMenuButtons(musicPanel, musicBar)
 multiTextLabels(media.music, musicPanel, 50, 8, "black")
-multiControlBoxes(musicPanel, audio, audio.music)
+multiControlBoxes(musicPanel, audio, audio.music, "small")
 
 soundBar = Display()
 soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
@@ -524,26 +525,27 @@ multiPanel(media.sounds, soundPanel,
 
 multiMenuButtons(soundPanel, soundBar)
 multiTextLabels(media.sounds, soundPanel, 50, 8, "black")
-multiControlBoxes(soundPanel, audio, audio.sounds)
+multiControlBoxes(soundPanel, audio, audio.sounds, "large")
 
 effectsBar = Display()
 effectsBar.newFrCan(sW * 0.8, space * 5, sW * 0.2, space, "light coral")
 
-effects = Display()
-effects.newFrCan(sW * 0.8, space * 6,
-                 sW * 0.2, sH - space * 6, "orange")
+effectsPanel = Display()
+multiPanel(media.effects, effectsPanel,
+           sW * 0.8, space * 6,
+           sW * 0.2, sH - space * 6,
+           "orange")
 
-effects.text(50, 8, "Effects", "black")
-multiControlBoxes(effects, audio, audio.effects)
-
-
+multiMenuButtons(effectsPanel, effectsBar)
+multiTextLabels(media.effects, effectsPanel, 50, 8, "black")
+multiControlBoxes(effectsPanel, audio, audio.effects, "small")
 
 
 def checkStatus():
     audio.statusCheck()
     musicPanel.isPlaying()
     soundPanel.isPlaying()
-    effects.isPlaying()
+    effectsPanel.isPlaying()
     root.after(200, checkStatus)
 
 
