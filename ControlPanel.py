@@ -3,6 +3,7 @@ import tkinter as tk  # gui
 import functools  # to pass a function with parameters into tkinter button
 import vlc  # audio
 import time  # code runs faster than vlc can load.  Adds 0.01s delay
+import ast  # to turn string into code that can be evaluated for saved files
 # import PIL  # for pictures
 # import yeelight  # lights
 
@@ -270,6 +271,7 @@ class Presets():
 
     def __init__(self):
         self.currentData = list()
+        self.presets = list()
 
     def playCurrent(self):
         for i in range(0, len(self.currentData)):
@@ -283,14 +285,28 @@ class Presets():
                     audio.play(audioList, trackID)
 
     def clearCurrent(self):
-        pass
+        self.currentData = list()
 
-    def savePreset(self):
-        # save, then re-scan file and re-fresh?
-        pass
+    def savePreset(self, saveFile):
+        data = list()
+        data.update({"Preset Name": saveFile, "Data": self.currentData})
+        fileName = str(saveFile) + ".txt"
+        filePath = os.path.join("CoreSaved", fileName)
 
-    def loadPreset(self):
-        pass
+        with open(filePath, "w+") as f:
+            f.write(str(data))
+
+    def loadPreset(self, saveFile):
+        fileName = str(saveFile) + ".txt"
+        filePath = os.path.join("CoreSaved", fileName)
+        self.currentData = list()
+        data = dict()
+
+        with open(filePath, "r") as f:
+            fData = f.read()
+            data = ast.literal_eval(fData)
+
+        self.currentData = data["Data"]
 
 
 presets = Presets()
@@ -318,6 +334,7 @@ class Display():
         self.pb = dict()  # buttons are all unique so no need for list
         self.ab = list()  # may have identical names so list required
         self.controlBox = list()  # holds each track control box
+        self.presetB = list()
 
     def newFrCan(self, xPos, yPos, w, h, col, panel="No Panel"):
         global root
@@ -490,6 +507,36 @@ def multiMenuButtons(source, output):
                                              source.f, frameKey))
 
 
+def multiPresetButtons(output):
+    startX = 400
+    spacing = (sW - startX) / 10
+    coreSavedFilesRaw = os.listdir("CoreSaved")
+    coreSavedFiles = list()
+
+    for i in coreSavedFilesRaw:
+        if i.endswith(".txt"):
+            coreSavedFiles.append(i)
+
+    for i in range(0, len(coreSavedFiles)):
+        fileName = str(coreSavedFiles[i])
+        filePath = os.path.join("CoreSaved", fileName)
+        presetName = str()
+        data = dict()
+        with open(filePath, "r") as f:
+            data = ast.literal_eval(f.read())
+            print("success")
+        presetName = data["Preset Name"]
+
+        saveB = top.btn("No Panel", "Save", "pink",
+                        functools.partial(presets.savePreset, i))
+        loadB = top.btn("No Panel", presetName, "pink",
+                        functools.partial(presets.loadPreset, i))
+
+        output.presetB.append({"SaveB": saveB, "LoadB": loadB})
+        output.presetB[i]["SaveB"].place(x=startX + spacing * i, y=60)
+        output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=70)
+
+
 def multiControlBoxes(output, audInst, audioList, boxSize):
     global sW
     global sH
@@ -542,6 +589,15 @@ top.text(50, 25, "Title?", "yellow")
 top.rect(0, space, sW, space * 2, "pink")
 top.text(50, 75, "Presets", "yellow")
 
+playPreset = top.btn("No Panel", "Play Preset", "pink", presets.playCurrent)
+playPreset.place(x=100, y=65)
+clearPreset = top.btn("No Panel", "Clear Preset", "pink", presets.clearCurrent)
+clearPreset.place(x=200, y=65)
+stopAll = top.btn("No Panel", "Stop All", "pink", audio.stopAll)
+stopAll.place(x=300, y=65)
+
+# multiPresetButtons(top)
+
 top.rect(0, space * 2, sW, space * 2, "orange")
 top.text(50, 150, "Lights", "blue")
 
@@ -552,12 +608,12 @@ top.text(50, space * 4 + space / 2, "Events", "blue")
 musicBar = Display()
 musicBar.newFrCan(0, space * 5, sW * 0.2, space, "coral")
 
+
 musicPanel = Display()
 multiPanel(media.music, musicPanel,
            0, space * 6,
            sW * 0.2, sH - space * 6,
            "orange")
-
 multiMenuButtons(musicPanel, musicBar)
 multiTextLabels(media.music, musicPanel, 50, 8, "black")
 multiControlBoxes(musicPanel, audio, audio.music, "small")
@@ -565,15 +621,16 @@ multiControlBoxes(musicPanel, audio, audio.music, "small")
 soundBar = Display()
 soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
 
+
 soundPanel = Display()
 multiPanel(media.sounds, soundPanel,
            sW * 0.2, space * 6,
            sW * 0.6, sH - space * 6,
            "pink")
-
 multiMenuButtons(soundPanel, soundBar)
 multiTextLabels(media.sounds, soundPanel, 50, 8, "black")
 multiControlBoxes(soundPanel, audio, audio.sounds, "large")
+
 
 effectsBar = Display()
 effectsBar.newFrCan(sW * 0.8, space * 5, sW * 0.2, space, "light coral")
@@ -583,7 +640,6 @@ multiPanel(media.effects, effectsPanel,
            sW * 0.8, space * 6,
            sW * 0.2, sH - space * 6,
            "orange")
-
 multiMenuButtons(effectsPanel, effectsBar)
 multiTextLabels(media.effects, effectsPanel, 50, 8, "black")
 multiControlBoxes(effectsPanel, audio, audio.effects, "small")
