@@ -1,11 +1,16 @@
 import os  # to access local files
 import tkinter as tk  # gui
 import functools  # to pass a function with parameters into tkinter button
-import vlc  # audio
 import time  # code runs faster than vlc can load.  Adds 0.01s delay
 import ast  # to turn string into code that can be evaluated for saved files
+import vlc  # audio
+import yeelight  # lights
 # import PIL  # for pictures
-# import yeelight  # lights
+
+print("\"create\" or \"game\" mode?")
+mode = input()
+print("How many lights?")
+lightCount = input()
 
 
 class Media():
@@ -16,7 +21,6 @@ class Media():
         self.music = list()
         self.sounds = list()
         self.effects = list()
-        self.genID = 0
 
     def getMedia(self, inputDir, varList):
         items = os.listdir(inputDir)
@@ -37,9 +41,7 @@ class Media():
                     trackName = j[:-4]
                     panelGroup.append({"panel": str(subDir),
                                        "track": str(trackName),
-                                       "path": str(fullPath),
-                                       "trackID": str(self.genID)})
-                self.genID += 1
+                                       "path": str(fullPath)})
 
             varList.append(panelGroup)
 
@@ -84,34 +86,32 @@ class Audio():
 
                 trackObj.update({"panel": ma["panel"],
                                  "track": ma["track"],
-                                 "trackID": ma["trackID"],
                                  "volume": 100,
                                  "vlcObj": vlc.MediaPlayer(ma["path"])})
 
                 varList.append(trackObj)
 
-    def play(self, audioList, trackID):
+    def play(self, audioList, track):
 
         def handleTrack():
             for i in range(0, len(audioList)):
-                if audioList[i]["trackID"] == trackID:
+                if audioList[i]["track"] == track:
                     trackObj = audioList[i]
                     self.active.append({"panel": trackObj["panel"],
                                         "audioList": audioList,
                                         "track": trackObj["track"],
-                                        "trackID": trackObj["trackID"],
                                         "vlcObj": trackObj["vlcObj"]})
 
                     trackObj["vlcObj"].stop()
-                    time.sleep(0.01)  # code runs faster than vlc can load
+                    time.sleep(0.02)  # code runs faster than vlc can load
                     trackObj["vlcObj"].play()
-                    time.sleep(0.01)  # code runs faster than vlc can load
+                    time.sleep(0.02)  # code runs faster than vlc can load
                     trackObj["vlcObj"].audio_set_volume(trackObj["volume"])
 
         if len(self.active) > 0:
             found = False
             for i in range(0, len(self.active)):
-                if self.active[i]["trackID"] == trackID:
+                if self.active[i]["track"] == track:
                     found = True
 
             if found is True:
@@ -121,14 +121,14 @@ class Audio():
         else:
             handleTrack()
 
-    def stop(self, audioList, trackID):
+    def stop(self, audioList, track):
         for i in range(0, len(self.active)):
-            if self.active[i]["trackID"] == trackID:
+            if self.active[i]["track"] == track:
                 self.active[i]["vlcObj"].stop()
                 self.active.pop(i)
                 break
 
-    def volume(self, audioList, trackID, volUpDown):
+    def volume(self, audioList, track, volUpDown):
 
         def volUp(trackObj):
             currentVol = trackObj["volume"]
@@ -157,7 +157,7 @@ class Audio():
                     trackObj["vlcObj"].audio_set_volume(0)
 
         for i in range(0, len(audioList)):
-            if audioList[i]["trackID"] == trackID:
+            if audioList[i]["track"] == track:
                 if volUpDown == "up":
                     volUp(audioList[i])
                 elif volUpDown == "down":
@@ -171,15 +171,15 @@ class Audio():
             stopList.append(self.active[i])
 
         for i in range(0, len(stopList)):
-            trackID = stopList[i]["trackID"]
+            track = stopList[i]["track"]
             audioList = stopList[i]["audioList"]
 
             if self.music == audioList:
-                self.stop(self.music, trackID)
+                self.stop(self.music, track)
             elif self.sounds == audioList:
-                self.stop(self.sounds, trackID)
+                self.stop(self.sounds, track)
             elif self.effects == audioList:
-                self.stop(self.effects, trackID)
+                self.stop(self.effects, track)
 
     def statusCheck(self):
         checkList = list()
@@ -193,29 +193,28 @@ class Audio():
 
             if state == vlc.State.Ended:
                 if "FX" in trackObj["panel"]:
-                    self.stop(trackObj["audioList"], trackObj["trackID"])
+                    self.stop(trackObj["audioList"], trackObj["track"])
                 else:
                     trackObj["vlcObj"].stop()
-                    time.sleep(0.01)
+                    time.sleep(0.02)
                     trackObj["vlcObj"].play()
 
-    def selectTrack(self, audioList, trackID):
+    def selectTrack(self, audioList, track):
         for i in range(0, len(audioList)):
-            if audioList[i]["trackID"] == trackID:
+            if audioList[i]["track"] == track:
                 trackObj = audioList[i]
                 data = {"panel": trackObj["panel"],
                         "audioList": audioList,
                         "track": trackObj["track"],
-                        "trackID": trackObj["trackID"],
                         "volume": trackObj["volume"]}
 
-                if data not in presets.currentData:
-                    presets.currentData.append(data)
+                if data not in presets.cData:
+                    presets.cData.append(data)
 
-    def removeTrack(self, trackID):
-        for i in range(0, len(presets.currentData)):
-            if presets.currentData[i]["trackID"] == trackID:
-                presets.currentData.pop(i)
+    def removeTrack(self, track):
+        for i in range(0, len(presets.cData)):
+            if presets.cData[i]["track"] == track:
+                presets.cData.pop(i)
                 break
 
 
@@ -225,88 +224,105 @@ audio.audioLoader(media.sounds, audio.sounds)
 audio.audioLoader(media.effects, audio.effects)
 
 
-class TestAudio():
-
-    def __init__(self, trackID="0"):
-        self.trackID = trackID
-
-    def play(self):
-        audio.play(audio.music, self.trackID)
-
-    def stop(self):
-        audio.stop(audio.music, self.trackID)
-
-    def getvol(self):
-        for i in range(0, len(audio.music)):
-            if audio.music[i]["trackID"] == self.trackID:
-                print(str(audio.music[i]["volume"]))
-
-    def volup(self):
-        audio.volume(audio.music, self.trackID, "up")
-        self.getvol()
-
-    def voldown(self):
-        audio.volume(audio.music, self.trackID, "down")
-        self.getvol()
-
-    def startmulti(self):
-        audio.play(audio.music, "0")
-        audio.play(audio.music, "1")
-        audio.play(audio.sounds, "14")
-
-    def stopall(self):
-        audio.stopAll()
-
-
-test = TestAudio()
-
-
 class Lights():
 
+    standTop = "0x0000000007e71dfa"
+    standMid = "0x0000000007e71ffd"
+    standBottom = "0x0000000007e74620"
+
     def __init__(self):
-        pass
+        self.bulbList = None
+        self.lt = list()
+        self.ltNames = list()
+
+    def discover(self):
+        global lightCount
+
+        while len(self.bulbList) < lightCount:
+            self.bulbList = yeelight.discover_bulbs(timeout=1)
+        print(str(len(self.bulbList)) + " bulbs found")
+
+    def assign(self, transition="smooth"):
+        # transition can be "smooth" at 300ms or "sudden"
+        Lights.lt = list()  # clear assignment
+
+        # assigns bulbs independent of IP address
+        for i in range(0, len(self.bulbList)):
+            bulbID = self.bulbList[i]["capabilities"]["id"]
+
+            if bulbID == Lights.standTop:
+                self.lt.append(yeelight.Bulb(
+                    self.bulbList[i]["ip"], effect=transition))
+                self.ltNames.append("standTop")
+            elif bulbID == Lights.standMid:
+                self.lt.append(yeelight.Bulb(
+                    self.bulbList[i]["ip"], effect=transition))
+                self.ltNames.append("standMid")
+            elif bulbID == Lights.standBottom:
+                self.lt.append(yeelight.Bulb(
+                    self.bulbList[i]["ip"], effect=transition))
+                self.ltNames.append("standBottom")
 
 
 class Presets():
 
     def __init__(self):
-        self.currentData = list()
+        self.cData = list()
         self.presets = list()
 
     def playCurrent(self):
-        for i in range(0, len(self.currentData)):
-            audioList = self.currentData[i]["audioList"]
-            trackID = self.currentData[i]["trackID"]
-            volume = self.currentData[i]["volume"]
+        audio.stopAll()
+        for i in range(0, len(self.cData)):
+            audioList = self.cData[i]["audioList"]
+            track = self.cData[i]["track"]
+            volume = self.cData[i]["volume"]
 
             for j in range(0, len(audioList)):
-                if audioList[j]["trackID"] == trackID:
+                if audioList[j]["track"] == track:
                     audioList[j].update({"volume": volume})
-                    audio.play(audioList, trackID)
+                    audio.play(audioList, track)
+                    break
 
     def clearCurrent(self):
-        self.currentData = list()
+        self.cData = list()
 
     def savePreset(self, saveFile):
-        data = list()
-        data.update({"Preset Name": saveFile, "Data": self.currentData})
-        fileName = str(saveFile) + ".txt"
-        filePath = os.path.join("CoreSaved", fileName)
+        dataLoad = dict()
+        cDataNoObject = list()
+        for i in range(0, len(self.cData)):
+            trackData = dict()
+            for k, v in self.cData[i].items():
+                if k != "audioList":
+                    trackData.update({k: v})
+            cDataNoObject.append(trackData)
+        print("Enter preset name:")
+        dataLoad.update({"Preset Name": input(), "Data": cDataNoObject})
+        filePath = os.path.join("CoreSaved", saveFile)
 
-        with open(filePath, "w+") as f:
-            f.write(str(data))
+        with open(filePath, "w") as f:
+            f.write(str(dataLoad))
 
-    def loadPreset(self, saveFile):
-        fileName = str(saveFile) + ".txt"
-        filePath = os.path.join("CoreSaved", fileName)
-        self.currentData = list()
+        print("Saved!")
+
+    def loadPreset(self, audioInst, saveFile):
+        filePath = os.path.join("CoreSaved", saveFile)
+        self.cData = list()
         data = dict()
 
         with open(filePath, "r") as f:
-            fData = f.read()
-            data = ast.literal_eval(fData)
+            data = ast.literal_eval(f.read())
 
-        self.currentData = data["Data"]
+        self.cData = data["Data"]
+        aLists = [audioInst.music, audioInst.sounds, audioInst.effects]
+
+        for i in range(0, len(self.cData)):
+            for j in range(0, len(aLists)):
+                for k in range(0, len(aLists[j])):
+                    if self.cData[i]["track"] == aLists[j][k]["track"]:
+                        self.cData[i].update({"audioList": aLists[j]})
+                        break
+
+        self.playCurrent()
 
 
 presets = Presets()
@@ -368,7 +384,7 @@ class Display():
 
     def trackCtrlBox(self,
                      xPos, yPos, hlbg,
-                     track, trackID, vlcObj,
+                     track, vlcObj,
                      audInst, audioList, boxSize, panel="No Panel"):
 
         global sW
@@ -380,8 +396,8 @@ class Display():
             panelWidth = sW * 0.2
             boxWidth = panelWidth - gap * 2
         elif boxSize == "large":
-            panelWidth = sW * 0.6
-            boxWidth = (panelWidth - gap * 6) / 3
+            panelWidth = sW * 0.8
+            boxWidth = (panelWidth - gap * 6) / 4
 
         panelHeight = sH - space * 6
         boxHeight = (panelHeight - gap * 9) / 6
@@ -393,53 +409,49 @@ class Display():
         trackName = self.text(xPos + boxWidth * 0.5, yPos + 20,
                               track, "black", panel)  # track
 
-        def testFunc():
-            print("yes")
-
         selectTrack = self.btn(panel, "Select", hlbg,
                                functools.partial(audInst.selectTrack,
-                                                 audioList, trackID))
+                                                 audioList, track))
         selectTrack.place(x=xPos + boxWidth * 0.02, y=yPos + boxHeight * 0.7,
                           anchor="sw")
         selectTrack.config(width=8)
 
         removeTrack = self.btn(panel, "Remove", hlbg,
-                               functools.partial(audInst.removeTrack,
-                                                 trackID))
+                               functools.partial(audInst.removeTrack, track))
         removeTrack.place(x=xPos + boxWidth * 0.02, y=yPos + boxHeight * 0.98,
                           anchor="sw")
         removeTrack.config(width=8)
 
         volUp = self.btn(panel, "Vol Up", hlbg,
                          functools.partial(audInst.volume,
-                                           audioList, trackID, "up"))
+                                           audioList, track, "up"))
         volUp.place(x=xPos + boxWidth * 0.3, y=yPos + boxHeight * 0.7,
                     anchor="sw")
         volUp.config(width=8)
 
         volDown = self.btn(panel, "Vol Down", hlbg,
                            functools.partial(audInst.volume,
-                                             audioList, trackID, "down"))
+                                             audioList, track, "down"))
         volDown.place(x=xPos + boxWidth * 0.3, y=yPos + boxHeight * 0.98,
                       anchor="sw")
         volDown.config(width=8)
 
         playTrack = self.btn(panel, "Play", hlbg,
                              functools.partial(audInst.play,
-                                               audioList, trackID))
+                                               audioList, track))
         playTrack.place(x=xPos + boxWidth * 0.98, y=yPos + boxHeight * 0.7,
                         anchor="se")
         playTrack.config(width=8)
 
         stopTrack = self.btn(panel, "Stop", hlbg,
                              functools.partial(audInst.stop,
-                                               audioList, trackID))
+                                               audioList, track))
         stopTrack.place(x=xPos + boxWidth * 0.98, y=yPos + boxHeight * 0.98,
                         anchor="se")
         stopTrack.config(width=8)
 
         panelElements.update({"Outline": outline, "Track Name": trackName,
-                              "trackID": trackID,
+                              "track": track,
                               "Select": selectTrack, "Remove": removeTrack,
                               "Vol Up": volUp, "Vol Down": volDown,
                               "Play": playTrack, "Stop": stopTrack,
@@ -464,9 +476,8 @@ class Display():
 
             loaded = False
 
-            for j in range(0, len(presets.currentData)):
-                if presets.currentData[j]["trackID"] ==\
-                   self.controlBox[i]["trackID"]:
+            for j in range(0, len(presets.cData)):
+                if presets.cData[j]["track"] == self.controlBox[i]["track"]:
                     loaded = True
                     break
 
@@ -508,14 +519,19 @@ def multiMenuButtons(source, output):
 
 
 def multiPresetButtons(output):
+    global audio
+    global mode
+
     startX = 400
-    spacing = (sW - startX) / 10
+    spacing = (sW - startX) / 9
     coreSavedFilesRaw = os.listdir("CoreSaved")
     coreSavedFiles = list()
 
     for i in coreSavedFilesRaw:
         if i.endswith(".txt"):
             coreSavedFiles.append(i)
+
+    coreSavedFiles.reverse()
 
     for i in range(0, len(coreSavedFiles)):
         fileName = str(coreSavedFiles[i])
@@ -524,17 +540,29 @@ def multiPresetButtons(output):
         data = dict()
         with open(filePath, "r") as f:
             data = ast.literal_eval(f.read())
-            print("success")
         presetName = data["Preset Name"]
 
-        saveB = top.btn("No Panel", "Save", "pink",
-                        functools.partial(presets.savePreset, i))
-        loadB = top.btn("No Panel", presetName, "pink",
-                        functools.partial(presets.loadPreset, i))
+        if mode == "create":
+            saveB = top.btn("No Panel", "Save", "pink",
+                            functools.partial(presets.savePreset, fileName))
+            loadB = top.btn("No Panel", presetName, "pink",
+                            functools.partial(presets.loadPreset,
+                                              audio, fileName))
 
-        output.presetB.append({"SaveB": saveB, "LoadB": loadB})
-        output.presetB[i]["SaveB"].place(x=startX + spacing * i, y=60)
-        output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=70)
+            output.presetB.append({"SaveB": saveB, "LoadB": loadB})
+            output.presetB[i]["SaveB"].place(x=startX + spacing * i, y=53)
+            output.presetB[i]["SaveB"].config(width=10)
+            output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=76)
+            output.presetB[i]["LoadB"].config(width=10)
+
+        elif mode == "game":
+            loadB = top.btn("No Panel", presetName, "pink",
+                            functools.partial(presets.loadPreset,
+                                              audio, fileName))
+
+            output.presetB.append({"LoadB": loadB})
+            output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=65)
+            output.presetB[i]["LoadB"].config(width=10)
 
 
 def multiControlBoxes(output, audInst, audioList, boxSize):
@@ -571,11 +599,10 @@ def multiControlBoxes(output, audInst, audioList, boxSize):
         xPosition = gap + columnNumber * (boxWidth + gap)
         yPosition = gap * 2 + rowNumber * (boxHeight + gap)
         track = audioList[i]["track"]
-        trackID = audioList[i]["trackID"]
         vlcObj = audioList[i]["vlcObj"]
 
         output.trackCtrlBox(xPosition, yPosition, "red",
-                            track, trackID, vlcObj,
+                            track, vlcObj,
                             audInst, audioList, boxSize, currentPanel)
 
         rowNumber += 1
@@ -589,14 +616,18 @@ top.text(50, 25, "Title?", "yellow")
 top.rect(0, space, sW, space * 2, "pink")
 top.text(50, 75, "Presets", "yellow")
 
-playPreset = top.btn("No Panel", "Play Preset", "pink", presets.playCurrent)
+playPreset = top.btn("No Panel", "Play", "pink", presets.playCurrent)
 playPreset.place(x=100, y=65)
-clearPreset = top.btn("No Panel", "Clear Preset", "pink", presets.clearCurrent)
+playPreset.config(width=7)
+clearPreset = top.btn("No Panel", "Clear",
+                      "pink", presets.clearCurrent)
 clearPreset.place(x=200, y=65)
-stopAll = top.btn("No Panel", "Stop All", "pink", audio.stopAll)
+clearPreset.config(width=7)
+stopAll = top.btn("No Panel", "Silence!", "pink", audio.stopAll)
 stopAll.place(x=300, y=65)
+stopAll.config(width=7)
 
-# multiPresetButtons(top)
+multiPresetButtons(top)
 
 top.rect(0, space * 2, sW, space * 2, "orange")
 top.text(50, 150, "Lights", "blue")
@@ -605,28 +636,26 @@ top.rect(0, space * 4, sW, space, "pink")
 top.text(50, space * 4 + space / 2, "Events", "blue")
 
 
-musicBar = Display()
-musicBar.newFrCan(0, space * 5, sW * 0.2, space, "coral")
-
-
-musicPanel = Display()
-multiPanel(media.music, musicPanel,
-           0, space * 6,
-           sW * 0.2, sH - space * 6,
-           "orange")
-multiMenuButtons(musicPanel, musicBar)
-multiTextLabels(media.music, musicPanel, 50, 8, "black")
-multiControlBoxes(musicPanel, audio, audio.music, "small")
-
 soundBar = Display()
-soundBar.newFrCan(sW * 0.2, space * 5, sW * 0.6, space, "orange")
+soundBar.newFrCan(0, space * 5, sW * 0.8, space, "orange")
 
 
 soundPanel = Display()
-multiPanel(media.sounds, soundPanel,
-           sW * 0.2, space * 6,
-           sW * 0.6, sH - space * 6,
+
+multiPanel(media.music, soundPanel,
+           0, space * 6,
+           sW * 0.8, sH - space * 6,
            "pink")
+
+multiPanel(media.sounds, soundPanel,
+           0, space * 6,
+           sW * 0.8, sH - space * 6,
+           "pink")
+
+multiMenuButtons(soundPanel, soundBar)
+multiTextLabels(media.music, soundPanel, 50, 8, "black")
+multiControlBoxes(soundPanel, audio, audio.music, "large")
+
 multiMenuButtons(soundPanel, soundBar)
 multiTextLabels(media.sounds, soundPanel, 50, 8, "black")
 multiControlBoxes(soundPanel, audio, audio.sounds, "large")
@@ -647,7 +676,6 @@ multiControlBoxes(effectsPanel, audio, audio.effects, "small")
 
 def checkStatus():
     audio.statusCheck()
-    musicPanel.isPlaying()
     soundPanel.isPlaying()
     effectsPanel.isPlaying()
     root.after(200, checkStatus)
