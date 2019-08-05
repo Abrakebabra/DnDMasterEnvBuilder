@@ -5,12 +5,49 @@ import time  # code runs faster than vlc can load.  Adds 0.01s delay
 import ast  # to turn string into code that can be evaluated for saved files
 import vlc  # audio
 import yeelight  # lights
-# import PIL  # for pictures
 
-print("\"create\" or \"game\" mode?")
-mode = input()
-print("How many lights?")
-lightCount = input()
+
+mode = str()
+
+
+def modeF():
+    global mode
+    while not mode:
+        print("\"create\" or \"game\" mode?")
+        modeEntry = input()
+        if modeEntry == "create":
+            mode = modeEntry
+        elif modeEntry == "game":
+            mode = modeEntry
+
+
+inputLoop = True
+lightCount = int()
+
+
+def lightF():
+    global inputLoop
+    global lightCount
+
+    while inputLoop is True:
+        print("0, 3 or 6 lights?")
+        lightCountEntry = input()
+        if lightCountEntry == "0":
+            lightCount = int(lightCountEntry)
+            inputLoop = False
+        elif lightCountEntry == "3":
+            lightCount = int(lightCountEntry)
+            inputLoop = False
+        elif lightCountEntry == "6":
+            lightCount = int(lightCountEntry)
+            inputLoop = False
+
+
+# modeF()
+# lightF()
+
+mode = "game"
+lightCount = 0
 
 
 class Media():
@@ -192,7 +229,7 @@ class Audio():
             state = trackObj["vlcObj"].get_state()
 
             if state == vlc.State.Ended:
-                if "FX" in trackObj["panel"]:
+                if trackObj["audioList"] == self.effects:
                     self.stop(trackObj["audioList"], trackObj["track"])
                 else:
                     trackObj["vlcObj"].stop()
@@ -226,14 +263,25 @@ audio.audioLoader(media.effects, audio.effects)
 
 class Lights():
 
-    standTop = "0x0000000007e71dfa"
-    standMid = "0x0000000007e71ffd"
-    standBottom = "0x0000000007e74620"
+    # Light physical IDs
+    standHigh = "0x0000000007e71dfa"
+    standMid = "0x0000000007e74620"
+    standLow = "0x0000000007e71ffd"
+    clip1 = ""
+    clip2 = ""
+    clip3 = ""
 
-    def __init__(self):
-        self.bulbList = None
+    def __init__(self, lightCount):
+        self.bulbList = list()
         self.lt = list()
-        self.ltNames = list()
+        self.lightSetup = str()
+
+        if lightCount == 0:
+            self.lightSetup = "None"
+        elif lightCount == 3:
+            self.lightSetup = "Out"
+        elif lightCount == 6:
+            self.lightSetup = "Home"
 
     def discover(self):
         global lightCount
@@ -250,18 +298,72 @@ class Lights():
         for i in range(0, len(self.bulbList)):
             bulbID = self.bulbList[i]["capabilities"]["id"]
 
-            if bulbID == Lights.standTop:
-                self.lt.append(yeelight.Bulb(
-                    self.bulbList[i]["ip"], effect=transition))
-                self.ltNames.append("standTop")
+            if bulbID == Lights.clip1:
+                self.lt.append({"Light Name": "clip1",
+                                "LightObj": yeelight.Bulb(
+                                 self.bulbList[i]["ip"], effect=transition),
+                                "state": "off", "brightness": 100,
+                                "r": "?", "g": "?", "b": "?",
+                                "h": "?", "s": "?", "v": "?"})
+            elif bulbID == Lights.clip2:
+                self.lt.append({"Light Name": "clip2",
+                                "LightObj": yeelight.Bulb(
+                                 self.bulbList[i]["ip"], effect=transition)})
+            elif bulbID == Lights.clip3:
+                self.lt.append({"Light Name": "clip3",
+                                "LightObj": yeelight.Bulb(
+                                 self.bulbList[i]["ip"], effect=transition)})
+            elif bulbID == Lights.standHigh:
+                self.lt.append({"Light Name": "standHigh",
+                                "LightObj": yeelight.Bulb(
+                                 self.bulbList[i]["ip"], effect=transition)})
             elif bulbID == Lights.standMid:
-                self.lt.append(yeelight.Bulb(
-                    self.bulbList[i]["ip"], effect=transition))
-                self.ltNames.append("standMid")
-            elif bulbID == Lights.standBottom:
-                self.lt.append(yeelight.Bulb(
-                    self.bulbList[i]["ip"], effect=transition))
-                self.ltNames.append("standBottom")
+                self.lt.append({"Light Name": "standMid",
+                                "LightObj": yeelight.Bulb(
+                                 self.bulbList[i]["ip"], effect=transition)})
+            elif bulbID == Lights.standLow:
+                self.lt.append({"Light Name": "standLow",
+                                "LightObj": yeelight.Bulb(
+                                 self.bulbList[i]["ip"], effect=transition)})
+
+    def allOn(self):
+        for i in range(0, len(self.lt)):
+            self.lt[i]["LightObj"].turn_on()
+            self.lt[i]
+
+    def allOff(self):
+        for i in range(0, len(self.lt)):
+            self.lt[i]["LightObj"].turn_off()
+
+    def on(self, lightName):
+        for i in range(0, len(self.lt)):
+            if self.lt[i]["Light Name"] == lightName:
+                self.lt[i]["LightObj"].turn_on()
+
+    def off(self, lightName):
+        for i in range(0, len(self.lt)):
+            if self.lt[i]["Light Name"] == lightName:
+                self.lt[i]["LightObj"].turn_off()
+
+    def change(self, lightName, r, g, b, brightness):
+        for i in range(0, len(self.lt)):
+            if self.lt[i]["Light Name"] == lightName:
+                self.lt[i]["LightObj"].set_rgb(r, g, b)
+                self.lt[i]["LightObj"].set_brightness(brightness)
+
+
+lights = Lights(lightCount)
+lights.discover()
+lights.assign()
+
+
+def testLight():
+    lights.on("standHigh")
+    lights.on("standMid")
+    lights.on("standLow")
+    lights.change("standHigh", 255, 0, 0, 100)
+    lights.change("standMid", 255, 0, 0, 100)
+    lights.change("standLow", 255, 0, 0, 100)
 
 
 class Presets():
@@ -370,7 +472,7 @@ class Display():
                                               fill=col, width=0)
 
     def text(self, x, y, words, col, panel="No Panel"):
-        self.c[panel].create_text(x, y, text=words, fill=col)
+        return self.c[panel].create_text(x, y, text=words, fill=col)
 
     def btn(self, panel, words, hlbg, action):
         # Wrapper to shorten button create method
@@ -384,30 +486,25 @@ class Display():
 
     def trackCtrlBox(self,
                      xPos, yPos, hlbg,
-                     track, vlcObj,
-                     audInst, audioList, boxSize, panel="No Panel"):
+                     track, vlcObj, audInst, audioList, panel="No Panel"):
 
         global sW
         global sH
         global space
 
         gap = 8
-        if boxSize == "small":
-            panelWidth = sW * 0.2
-            boxWidth = panelWidth - gap * 2
-        elif boxSize == "large":
-            panelWidth = sW * 0.8
-            boxWidth = (panelWidth - gap * 6) / 4
-
+        panelWidth = sW * 0.8
+        boxWidth = (panelWidth - gap * 6) / 4
         panelHeight = sH - space * 6
         boxHeight = (panelHeight - gap * 9) / 6
 
         panelElements = dict()  # holds current button dict info
 
         outline = self.rect(xPos, yPos, boxWidth, boxHeight,
-                            "red", panel)  # box outline
+                            "maroon", panel)  # box outline
+
         trackName = self.text(xPos + boxWidth * 0.5, yPos + 20,
-                              track, "black", panel)  # track
+                              track, "LightBlue1", panel)  # track
 
         selectTrack = self.btn(panel, "Select", hlbg,
                                functools.partial(audInst.selectTrack,
@@ -460,8 +557,10 @@ class Display():
         self.controlBox.append(panelElements)
 
     def isPlaying(self):
-        def object(panel, i, col):
+        def object(panel, i, col, textCol):
             self.c[panel].itemconfig(self.controlBox[i]["Outline"], fill=col)
+            self.c[panel].itemconfig(self.controlBox[i]["Track Name"],
+                                     fill=textCol)
             self.controlBox[i]["Select"].config(highlightbackground=col)
             self.controlBox[i]["Remove"].config(highlightbackground=col)
             self.controlBox[i]["Vol Up"].config(highlightbackground=col)
@@ -482,13 +581,13 @@ class Display():
                     break
 
             if statePlaying is True and loaded is True:
-                object(panel, i, "cyan")
+                object(panel, i, "seagreen1", "steel blue")
             elif statePlaying is True:
-                object(panel, i, "green")
+                object(panel, i, "sea green", "LightBlue1")
             elif loaded is True:
-                object(panel, i, "light blue")
+                object(panel, i, "SteelBlue1", "LightBlue1")
             else:
-                object(panel, i, "red")
+                object(panel, i, "dark slate blue", "LightBlue1")
 
     @classmethod
     def windowClosed(cls):
@@ -509,11 +608,11 @@ def multiTextLabels(source, output, x, y, col):
                         col, str(source[i][0]["panel"]))
 
 
-def multiMenuButtons(source, output):
+def multiMenuButtons(source, output, hlbg):
     for i in range(0, len(source.f.keys())):
         frameKey = [key for key in source.f.keys()][i]
-        output.panelButton(8 + 90 * i, 24,
-                           frameKey, "red",
+        output.panelButton(8 + 90 * i, 15,
+                           frameKey, hlbg,
                            functools.partial(source.raiseFrame,
                                              source.f, frameKey))
 
@@ -565,7 +664,7 @@ def multiPresetButtons(output):
             output.presetB[i]["LoadB"].config(width=10)
 
 
-def multiControlBoxes(output, audInst, audioList, boxSize):
+def multiControlBoxes(output, audInst, audioList):
     global sW
     global sH
     global space
@@ -602,8 +701,7 @@ def multiControlBoxes(output, audInst, audioList, boxSize):
         vlcObj = audioList[i]["vlcObj"]
 
         output.trackCtrlBox(xPosition, yPosition, "red",
-                            track, vlcObj,
-                            audInst, audioList, boxSize, currentPanel)
+                            track, vlcObj, audInst, audioList, currentPanel)
 
         rowNumber += 1
 
@@ -627,6 +725,10 @@ stopAll = top.btn("No Panel", "Silence!", "pink", audio.stopAll)
 stopAll.place(x=300, y=65)
 stopAll.config(width=7)
 
+megaRed = top.btn("No Panel", "RED!", "orange", testLight)
+megaRed.place(x=100, y=150)
+megaRed.config(width=7)
+
 multiPresetButtons(top)
 
 top.rect(0, space * 2, sW, space * 2, "orange")
@@ -637,47 +739,41 @@ top.text(50, space * 4 + space / 2, "Events", "blue")
 
 
 soundBar = Display()
-soundBar.newFrCan(0, space * 5, sW * 0.8, space, "orange")
-
+soundBar.newFrCan(0, space * 5, sW, space, "slate gray")
 
 soundPanel = Display()
 
 multiPanel(media.music, soundPanel,
            0, space * 6,
-           sW * 0.8, sH - space * 6,
-           "pink")
+           sW, sH - space * 6,
+           "LightSteelBlue4")
 
 multiPanel(media.sounds, soundPanel,
            0, space * 6,
-           sW * 0.8, sH - space * 6,
-           "pink")
+           sW, sH - space * 6,
+           "LightSteelBlue4")
 
-multiMenuButtons(soundPanel, soundBar)
-multiTextLabels(media.music, soundPanel, 50, 8, "black")
-multiControlBoxes(soundPanel, audio, audio.music, "large")
+multiPanel(media.effects, soundPanel,
+           0, space * 6,
+           sW, sH - space * 6,
+           "LightSteelBlue4")
 
-multiMenuButtons(soundPanel, soundBar)
-multiTextLabels(media.sounds, soundPanel, 50, 8, "black")
-multiControlBoxes(soundPanel, audio, audio.sounds, "large")
+multiMenuButtons(soundPanel, soundBar, "slate gray")
+multiTextLabels(media.music, soundPanel, 50, 8, "LightBlue2")
+multiControlBoxes(soundPanel, audio, audio.music)
 
+multiMenuButtons(soundPanel, soundBar, "slate gray")
+multiTextLabels(media.sounds, soundPanel, 50, 8, "LightBlue2")
+multiControlBoxes(soundPanel, audio, audio.sounds)
 
-effectsBar = Display()
-effectsBar.newFrCan(sW * 0.8, space * 5, sW * 0.2, space, "light coral")
-
-effectsPanel = Display()
-multiPanel(media.effects, effectsPanel,
-           sW * 0.8, space * 6,
-           sW * 0.2, sH - space * 6,
-           "orange")
-multiMenuButtons(effectsPanel, effectsBar)
-multiTextLabels(media.effects, effectsPanel, 50, 8, "black")
-multiControlBoxes(effectsPanel, audio, audio.effects, "small")
+multiMenuButtons(soundPanel, soundBar, "slate gray")
+multiTextLabels(media.effects, soundPanel, 50, 8, "LightBlue2")
+multiControlBoxes(soundPanel, audio, audio.effects)
 
 
 def checkStatus():
     audio.statusCheck()
     soundPanel.isPlaying()
-    effectsPanel.isPlaying()
     root.after(200, checkStatus)
 
 
