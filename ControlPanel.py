@@ -617,12 +617,12 @@ def multiMenuButtons(source, output, hlbg):
                                              source.f, frameKey))
 
 
-def multiPresetButtons(output):
+def multiPresetButtons(output, xPos, yPos):
     global audio
     global mode
 
-    startX = 400
-    spacing = (sW - startX) / 9
+    startX = xPos
+    spacing = (sW - startX) / 12
     coreSavedFilesRaw = os.listdir("CoreSaved")
     coreSavedFiles = list()
 
@@ -649,9 +649,11 @@ def multiPresetButtons(output):
                                               audio, fileName))
 
             output.presetB.append({"SaveB": saveB, "LoadB": loadB})
-            output.presetB[i]["SaveB"].place(x=startX + spacing * i, y=53)
+            output.presetB[i]["SaveB"].place(x=startX + spacing * i,
+                                             y=yPos - 12)
             output.presetB[i]["SaveB"].config(width=10)
-            output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=76)
+            output.presetB[i]["LoadB"].place(x=startX + spacing * i,
+                                             y=yPos + 11)
             output.presetB[i]["LoadB"].config(width=10)
 
         elif mode == "game":
@@ -660,7 +662,7 @@ def multiPresetButtons(output):
                                               audio, fileName))
 
             output.presetB.append({"LoadB": loadB})
-            output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=65)
+            output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=yPos)
             output.presetB[i]["LoadB"].config(width=10)
 
 
@@ -688,12 +690,8 @@ def multiControlBoxes(output, audInst, audioList):
             columnNumber += 1
             rowNumber = 0
 
-        if currentPanel == "No Panel":
-            panelWidth = sW * 0.2
-            boxWidth = panelWidth - gap * 2
-        else:
-            panelWidth = sW * 0.6
-            boxWidth = (panelWidth - gap * 6) / 3
+        panelWidth = sW * 0.6
+        boxWidth = (panelWidth - gap * 6) / 3
 
         xPosition = gap + columnNumber * (boxWidth + gap)
         yPosition = gap * 2 + rowNumber * (boxHeight + gap)
@@ -709,27 +707,26 @@ def multiControlBoxes(output, audInst, audioList):
 top = Display()
 top.newFrCan(0, 0, sW, space * 5, "grey")
 
-top.text(50, 25, "Title?", "yellow")
+top.text(50, 25, "Master", "yellow")
 
 top.rect(0, space, sW, space * 2, "pink")
 top.text(50, 75, "Presets", "yellow")
 
-playPreset = top.btn("No Panel", "Play", "pink", presets.playCurrent)
-playPreset.place(x=100, y=65)
+playPreset = top.btn("No Panel", "Play", "grey", presets.playCurrent)
+playPreset.place(x=100, y=15)
 playPreset.config(width=7)
-clearPreset = top.btn("No Panel", "Clear",
-                      "pink", presets.clearCurrent)
-clearPreset.place(x=200, y=65)
+clearPreset = top.btn("No Panel", "Clear", "grey", presets.clearCurrent)
+clearPreset.place(x=200, y=15)
 clearPreset.config(width=7)
-stopAll = top.btn("No Panel", "Silence!", "pink", audio.stopAll)
-stopAll.place(x=300, y=65)
+stopAll = top.btn("No Panel", "Silence!", "grey", audio.stopAll)
+stopAll.place(x=300, y=15)
 stopAll.config(width=7)
 
 megaRed = top.btn("No Panel", "RED!", "orange", testLight)
 megaRed.place(x=100, y=150)
 megaRed.config(width=7)
 
-multiPresetButtons(top)
+multiPresetButtons(top, 100, 65)
 
 top.rect(0, space * 2, sW, space * 2, "orange")
 top.text(50, 150, "Lights", "blue")
