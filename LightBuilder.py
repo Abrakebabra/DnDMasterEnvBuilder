@@ -2,14 +2,14 @@ import os  # to access local files
 import tkinter as tk  # gui
 import functools  # to pass a function with parameters into tkinter button
 import yeelight  # lights
+import math  # convert color temp to rgb
 
 # .get_model_specs() - Find out specs or to wake it up
 # .get_properties() - perhaps can use this to wake it up
 # .set_brightness()  1-100
 # .set_color_temp()  1700-6500
 # .set_hsv()  hue 0-359, sat 0-100, v 0-100 (brightness?  Omitted, brightness
-        # will remain the same)
-# .RGBTransition(red,green,blue,duration=ms (min 50), brightness=100)
+# will remain the same)
 
 
 inputLoop = True
@@ -37,6 +37,114 @@ def lightF():
 # lightF()
 
 lightCount = 3
+
+
+class ColorConverter():
+    def __init__(self):
+        pass
+
+    def rgbHex(self, r, g, b):
+        # https://stackoverflow.com/questions/3380726/converting-a-rgb-color-
+        # tuple-to-a-six-digit-code-in-python
+        return "#%02x%02x%02x" % (int(r), int(g), int(b))
+
+    def complimentary(self, r, g, b):
+        red = 255 - int(r)
+        green = 255 - int(g)
+        blue = 255 - int(b)
+
+        return red, green, blue
+
+    def tempRGB(self, colour_temperature):
+        # https://gist.github.com/petrklus/b1f427accdf7438606a6
+
+        # Converts from K to RGB, algorithm courtesy of
+        # http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+
+        # range check
+        if colour_temperature < 1000:
+            colour_temperature = 1000
+        elif colour_temperature > 40000:
+            colour_temperature = 40000
+
+        tmp_internal = colour_temperature / 100.0
+
+        # red
+        if tmp_internal <= 66:
+            red = 255
+        else:
+            tmp_red = 329.698727446 * math.pow(tmp_internal - 60, - 0.1332047592)
+            if tmp_red < 0:
+                red = 0
+            elif tmp_red > 255:
+                red = 255
+            else:
+                red = tmp_red
+
+        # green
+        if tmp_internal <= 66:
+            tmp_green = 99.4708025861 * math.log(tmp_internal) - 161.1195681661
+            if tmp_green < 0:
+                green = 0
+            elif tmp_green > 255:
+                green = 255
+            else:
+                green = tmp_green
+        else:
+            tmp_green = 288.1221695283 * math.pow(tmp_internal - 60, -0.0755148492)
+            if tmp_green < 0:
+                green = 0
+            elif tmp_green > 255:
+                green = 255
+            else:
+                green = tmp_green
+
+        # blue
+        if tmp_internal >= 66:
+            blue = 255
+        elif tmp_internal <= 19:
+            blue = 0
+        else:
+            tmp_blue = 138.5177312231 * math.log(tmp_internal - 10) - 305.0447927307
+
+            if tmp_blue < 0:
+                blue = 0
+            elif tmp_blue > 255:
+                blue = 255
+            else:
+                blue = tmp_blue
+
+        return red, green, blue
+
+    def hsvRGB(self, hue, sat, val):
+        # https://gist.github.com/mathebox/e0805f72e7db3269ec22
+        h = hue / 360
+        s = sat / 100
+        v = val / 100
+
+        i = math.floor(h * 6)
+        f = h * 6 - i
+        p = v * (1-s)
+        q = v * (1-f * s)
+        t = v * (1-(1-f) * s)
+
+        r, g, b = [
+            (v, t, p),
+            (q, v, p),
+            (p, v, t),
+            (p, q, v),
+            (t, p, v),
+            (v, p, q),
+        ][int(i % 6)]
+
+        red = int(r * 255)
+        green = int(g * 255)
+        blue = int(b * 255)
+
+        return red, green, blue
+
+
+colConv = ColorConverter()
 
 
 class Lights():
@@ -80,66 +188,66 @@ class Lights():
                 self.lt.append({"Light Name": "clip1",
                                 "LightObj": yeelight.Bulb(
                                  self.bulbList[i]["ip"], effect=transition),
-                                "state": "on", "mode": "temp",
+                                "state": "off", "mode": "temp",
                                 "temp": 4000, "brightness": 100,
                                 "h": 30, "s": 100})
             elif bulbID == Lights.clip2:
                 self.lt.append({"Light Name": "clip2",
                                 "LightObj": yeelight.Bulb(
                                  self.bulbList[i]["ip"], effect=transition),
-                                "state": "on", "mode": "temp",
+                                "state": "off", "mode": "temp",
                                 "temp": 4000, "brightness": 100,
                                 "h": 30, "s": 100})
             elif bulbID == Lights.clip3:
                 self.lt.append({"Light Name": "clip3",
                                 "LightObj": yeelight.Bulb(
                                  self.bulbList[i]["ip"], effect=transition),
-                                "state": "on", "mode": "temp",
+                                "state": "off", "mode": "temp",
                                 "temp": 4000, "brightness": 100,
                                 "h": 30, "s": 100})
             elif bulbID == Lights.standHigh:
                 self.lt.append({"Light Name": "standHigh",
                                 "LightObj": yeelight.Bulb(
                                  self.bulbList[i]["ip"], effect=transition),
-                                "state": "on", "mode": "temp",
+                                "state": "off", "mode": "temp",
                                 "temp": 4000, "brightness": 100,
                                 "h": 30, "s": 100})
             elif bulbID == Lights.standMid:
                 self.lt.append({"Light Name": "standMid",
                                 "LightObj": yeelight.Bulb(
                                  self.bulbList[i]["ip"], effect=transition),
-                                "state": "on", "mode": "temp",
+                                "state": "off", "mode": "temp",
                                 "temp": 4000, "brightness": 100,
                                 "h": 30, "s": 100})
             elif bulbID == Lights.standLow:
                 self.lt.append({"Light Name": "standLow",
                                 "LightObj": yeelight.Bulb(
                                  self.bulbList[i]["ip"], effect=transition),
-                                "state": "on", "mode": "temp",
+                                "state": "off", "mode": "temp",
                                 "temp": 4000, "brightness": 100,
                                 "h": 30, "s": 100})
 
     def allOn(self):
         for i in range(0, len(self.lt)):
-            self.lt[i].update({"status": "on"})
+            self.lt[i].update({"state": "on"})
             self.lt[i]["LightObj"].turn_on()
             self.lt[i]
 
     def allOff(self):
         for i in range(0, len(self.lt)):
-            self.lt[i].update({"status": "off"})
+            self.lt[i].update({"state": "off"})
             self.lt[i]["LightObj"].turn_off()
 
     def on(self, lightName):
         for i in range(0, len(self.lt)):
             if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"status": "on"})
+                self.lt[i].update({"state": "on"})
                 self.lt[i]["LightObj"].turn_on()
 
     def off(self, lightName):
         for i in range(0, len(self.lt)):
             if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"status": "off"})
+                self.lt[i].update({"state": "off"})
                 self.lt[i]["LightObj"].turn_off()
 
     def change(self, lightName, r, g, b, brightness):
@@ -148,20 +256,35 @@ class Lights():
                 self.lt[i]["LightObj"].set_rgb(r, g, b)
                 self.lt[i]["LightObj"].set_brightness(brightness)
 
-    def updateH(self, lightName, h, s, v):
+    def updateHSV(self, lightName, h, s, v):
         for i in range(0, len(self.lt)):
             if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"status": "on", "mode": "hsv",
+                self.lt[i].update({"state": "on", "mode": "hsv",
                                    "h": h, "s": s, "brightness": v})
 
     def updateTemp(self, lightName, temp, br):
         for i in range(0, len(self.lt)):
             if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"status": "on", "mode": "temp",
+                self.lt[i].update({"state": "on", "mode": "temp",
                                    "temp": temp, "brightness": br})
 
     def sendSettings(self):
-        pass
+        for i in range(0, len(self.lt)):
+            light = self.lt[i]
+
+            if self.lt[i]["state"] == "on":
+                light["LightObj"].turn_on()
+
+                if light["mode"] == "hsv":
+                    light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
+                                              int(light["brightness"]))
+
+                elif light["mode"] == "temp":
+                    light["LightObj"].set_color_temp(int(light["temp"]))
+                    light["LightObj"].set_brightness(int(light["brightness"]))
+
+            elif self.lt[i]["state"] == "off":
+                light["LightObj"].turn_off()
 
 
 lights = Lights(lightCount)
@@ -224,7 +347,7 @@ class Display():
                                               fill=col, width=0)
 
     def text(self, x, y, words, col, panel):
-        self.c[panel].create_text(x, y, text=words, fill=col)
+        return self.c[panel].create_text(x, y, text=words, fill=col)
 
     def btn(self, panel, words, hlbg, action):
         # Wrapper to shorten button create method
@@ -234,9 +357,6 @@ class Display():
     def controlPanel(self, xPos, yPos, lightName, panel):
         global sW
         global sH
-
-        def testFunc():
-            print("Test")
 
         gap = 10
         panelWidth = sW
@@ -256,7 +376,7 @@ class Display():
         panelElements = dict()  # holds current button dict info
 
         outline = self.rect(xPos, yPos, boxWidth, boxHeight,
-                            "SteelBlue1", panel)  # box outline
+                            "gray25", panel)  # box outline
 
         lightN = self.text(xPos + row1, yPos + 20,
                            lightName, "steel blue", panel)
@@ -290,32 +410,55 @@ class Display():
         entryTemp = tk.Entry(self.c[panel], width=5)
         entryTemp.place(x=xPos + col2, y=yPos + row2)
 
-        on = self.btn(panel, "On", "SteelBlue1",
+        on = self.btn(panel, "On", "Steelblue1",
                       functools.partial(lights.on, lightName))
         on.place(x=xPos + colL,
                  y=yPos + row3)
         on.config(width=5)
 
-        off = self.btn(panel, "Off", "SteelBlue1",
+        off = self.btn(panel, "Off", "Steelblue1",
                        functools.partial(lights.off, lightName))
         off.place(x=xPos + colR,
                   y=yPos + row3)
         off.config(width=5)
 
-        setHSV = self.btn(panel, "Set HSV", "SteelBlue1",
-                          testFunc)
+        def sendHSV(lightName):
+            for i in range(0, len(self.controlBox)):
+                if self.controlBox[i]["Light Name"] == lightName:
+                    try:
+                        h = int(self.controlBox[i]["entryH"].get())
+                        s = int(self.controlBox[i]["entryS"].get())
+                        v = int(self.controlBox[i]["entryBr"].get())
+                    except ValueError:
+                        return
+            lights.updateHSV(lightName, h, s, v)
+            lights.sendSettings()
+
+        def sendTemp(lightName):
+            for i in range(0, len(self.controlBox)):
+                if self.controlBox[i]["Light Name"] == lightName:
+                    try:
+                        temp = int(self.controlBox[i]["entryTemp"].get())
+                        bright = int(self.controlBox[i]["entryBr"].get())
+                    except ValueError:
+                        return
+            lights.updateTemp(lightName, temp, bright)
+            lights.sendSettings()
+
+        setHSV = self.btn(panel, "Set HSV", "Steelblue1",
+                          functools.partial(sendHSV, lightName))
         setHSV.place(x=xPos + col2 - 20,
                      y=yPos + row4)
         setHSV.config(width=10)
 
-        setTempBr = self.btn(panel, "Set Temp + Bright", "SteelBlue1",
-                             testFunc)
+        setTempBr = self.btn(panel, "Set Temp + Bright", "Steelblue1",
+                             functools.partial(sendTemp, lightName))
         setTempBr.place(x=xPos + col2 - 40,
                         y=yPos + row5)
         setTempBr.config(width=15)
 
         panelElements.update({"Outline": outline, "Light Text": lightN,
-                              "Light Name": lightName,
+                              "Light Name": lightName, "panel": panel,
                               "hText": hText, "entryH": entryH,
                               "sText": sText, "entryS": entryS,
                               "brightText": brightText, "entryBr": entryBr,
@@ -324,6 +467,52 @@ class Display():
                               "setHSV": setHSV, "setTempBr": setTempBr})
 
         self.controlBox.append(panelElements)
+
+    def rectangleColors(self):
+
+        def colChange(ctrlBox, colOutline, colText):
+            self.c[ctrlBox["panel"]].itemconfig(
+                ctrlBox["Outline"], fill=colOutline)
+            self.c[ctrlBox["panel"]].itemconfig(
+                ctrlBox["Light Text"], fill=colText)
+            self.c[ctrlBox["panel"]].itemconfig(
+                ctrlBox["hText"], fill=colText)
+            self.c[ctrlBox["panel"]].itemconfig(
+                ctrlBox["sText"], fill=colText)
+            self.c[ctrlBox["panel"]].itemconfig(
+                ctrlBox["brightText"], fill=colText)
+            self.c[ctrlBox["panel"]].itemconfig(
+                ctrlBox["tempText"], fill=colText)
+
+        for i in range(0, len(lights.lt)):
+            light = lights.lt[i]
+            if light["state"] == "off":
+                for j in range(0, len(self.controlBox)):
+                    ctrlBox = self.controlBox[j]
+                    if light["Light Name"] == ctrlBox["Light Name"]:
+                        colChange(ctrlBox, "slate gray", "gold2")
+
+            elif light["state"] == "on":
+                if light["mode"] == "temp":
+                    col1 = colConv.tempRGB(light["temp"])
+                    col2 = colConv.complimentary(col1[0], col1[1], col1[2])
+                    col1Hex = colConv.rgbHex(col1[0], col1[1], col1[2])
+                    col2Hex = colConv.rgbHex(col2[0], col2[1], col2[2])
+                    for j in range(0, len(self.controlBox)):
+                        ctrlBox = self.controlBox[j]
+                        if light["Light Name"] == ctrlBox["Light Name"]:
+                            colChange(ctrlBox, col1Hex, col2Hex)
+
+                elif light["mode"] == "hsv":
+                    col1 = colConv.hsvRGB(light["h"], light["s"],
+                                          light["brightness"])
+                    col2 = colConv.complimentary(col1[0], col1[1], col1[2])
+                    col1Hex = colConv.rgbHex(col1[0], col1[1], col1[2])
+                    col2Hex = colConv.rgbHex(col2[0], col2[1], col2[2])
+                    for j in range(0, len(self.controlBox)):
+                        ctrlBox = self.controlBox[j]
+                        if light["Light Name"] == ctrlBox["Light Name"]:
+                            colChange(ctrlBox, col1Hex, col2Hex)
 
 
 def multiPanel(output):
@@ -337,7 +526,7 @@ def multiPanel(output):
 
     for i in range(0, 6):
         output.newFrCan(gap / 2 + (gap * i) + i * ((sW / 6) - gap),
-                        sH / 4, boxWidth, boxHeight, "SteelBlue2", str(i))
+                        sH / 4, boxWidth, boxHeight, "Steelblue2", str(i))
 
 
 top = Display()
@@ -349,7 +538,7 @@ expl = top.text((sW / 2) - 50,
                             Sat 0-100\
                             Brightness 0-100\
                             Temp 1700-6500",
-                "SteelBlue1", "No Panel")
+                "Steelblue1", "No Panel")
 
 lightControl = Display()
 multiPanel(lightControl)
@@ -362,10 +551,11 @@ lightControl.controlPanel(0, 0, "standMid", "4")
 lightControl.controlPanel(0, 0, "standLow", "5")
 
 
-# def checkStatus():
-#     root.after(200, checkStatus)
+def checkStatus():
+    lightControl.rectangleColors()
+    root.after(200, checkStatus)
 
 
-# root.after(200, checkStatus)
+root.after(200, checkStatus)
 root.protocol("WM_DELETE_WINDOW", Display.windowClosed)
 root.mainloop()
