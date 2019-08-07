@@ -50,11 +50,9 @@ def lightF():
             lightCount = int(lightCountEntry)
             inputLoop = False
 
-# modeF()
-# lightF()
 
-mode = "edit"
-lightCount = 3
+modeF()
+lightF()
 
 
 class ColorConverter():
@@ -264,6 +262,11 @@ class Lights():
                                     "temp": 5000, "brightness": 100,
                                     "h": 30, "s": 100})
 
+    def nudge(self):
+        for i in range(0, len(self.lt)):
+            # wake up lights
+            self.lt[i]["LightObj"].get_model_specs()
+
     def allOn(self):
         for i in range(0, len(self.lt)):
             light = self.lt[i]
@@ -345,24 +348,19 @@ lights.discover()
 lights.assign()
 # lights.allOn()
 
-
-class Presets():
+lightDataTest = None
+class ReadWrite():
 
     def __init__(self):
         self.lightSettings = list()
 
-    def savePreset(self, saveFile):
+    def saveScene(self, saveFile):
         self.lightSettings = list()  # clears data
-        subDirs = os.listdir("CoreLights")
 
         if lights.lightSetup == "Home":
-            for i in subDirs:
-                if i == "All":
-                    subDir = os.path.join("CoreLights", i)
+            subDir = os.path.join("CoreLights", "All")
         elif lights.lightSetup == "Out":
-            for i in subDirs:
-                if i == "Portable":
-                    subDir = os.path.join("CoreLights", i)
+            subDir = os.path.join("CoreLights", "Portable")
 
         for i in range(0, len(lights.lt)):
             settings = dict()
@@ -373,12 +371,12 @@ class Presets():
             elif lt["state"] == "on":
                 if lt["mode"] == "hsv":
                     settings.update({"Light Name": lt["Light Name"],
-                                     "state": lt["state"],
+                                     "state": lt["state"], "mode": lt["mode"],
                                      "h": lt["h"], "s": lt["s"],
                                      "brightness": lt["brightness"]})
                 elif lt["mode"] == "temp":
                     settings.update({"Light Name": lt["Light Name"],
-                                     "state": lt["state"],
+                                     "state": lt["state"], "mode": lt["mode"],
                                      "temp": lt["temp"],
                                      "brightness": lt["brightness"]})
 
@@ -404,7 +402,7 @@ class Presets():
                 break
 
         if presetSaveOK is True:
-            dataLoad.update({"Preset Name": input(),
+            dataLoad.update({"Preset Name": presetName,
                              "Data": onlyData})
             # Wait.... needs to split off 3 or 6 lights...
             filePath = os.path.join(subDir, saveFile)
@@ -414,28 +412,37 @@ class Presets():
 
             print("Saved!")
 
-    def loadPreset(self, audioInst, saveFile):
-        filePath = os.path.join("CoreSaved", saveFile)
-        self.cData = list()
-        data = dict()
+    def loadScene(self, saveFile):
+        global lightDataTest
+
+        if lights.lightSetup == "Home":
+            subDir = os.path.join("CoreLights", "All")
+        elif lights.lightSetup == "Out":
+            subDir = os.path.join("CoreLights", "Portable")
+
+        filePath = os.path.join(subDir, saveFile)
+        lightData = dict()
 
         with open(filePath, "r") as f:
             data = ast.literal_eval(f.read())
-
-        self.cData = data["Data"]
-        aLists = [audioInst.music, audioInst.sounds, audioInst.effects]
-
-        for i in range(0, len(self.cData)):
-            for j in range(0, len(aLists)):
-                for k in range(0, len(aLists[j])):
-                    if self.cData[i]["track"] == aLists[j][k]["track"]:
-                        self.cData[i].update({"audioList": aLists[j]})
-                        break
-
-        self.playCurrent()
+        lightData = data["Data"]
+        lightDataTest = data["Data"]
 
 
-presets = Presets()
+        lights.nudge()
+
+        for i in range(0, len(lightData)):
+            for j in range(0, len(lights.lt)):
+                if lightData[i]["Light Name"] == lights.lt[j]["Light Name"]:
+                    for k, v in lightData[i].items():
+                        if k != "Light Name":
+                            lights.lt[j].update({k: v})
+
+                    lights.on(lights.lt[j]["Light Name"])
+                    break
+
+
+readWrite = ReadWrite()
 
 
 root = tk.Tk()
@@ -650,9 +657,10 @@ class Display():
                             colChange(ctrlBox, j, col1Hex, col2Hex)
 
                 elif light["mode"] == "hsv":
-                    col1 = colConv.hsvRGB(light["h"], light["s"],
-                                          light["brightness"])
-                    col2 = colConv.complimentary(col1[0], col1[1], col1[2])
+                    col1Brt = 75 + light["brightness"] / 4
+                    col1 = colConv.hsvRGB(light["h"], light["s"], col1Brt)
+                    colComp = 359 - abs(light["h"] - 180)
+                    col2 = colConv.hsvRGB(colComp, 100, 100)
                     col1Hex = colConv.rgbHex(col1[0], col1[1], col1[2])
                     col2Hex = colConv.rgbHex(col2[0], col2[1], col2[2])
                     for j in range(0, len(self.controlBox)):
@@ -676,33 +684,26 @@ def multiPanel(output):
 
 
 def multiPresetButtons(output, xPos, yPos):
+    coreLightFilesRaw = list()
+    coreLightFiles = list()
     startX = xPos
     spacing = (sW - startX) / 12
     rowGap = 100
     colNumber = 0
     rowNumber = 0
-    coreLightFilesRaw = list()
-    coreLightFiles = list()
-    subDirs = os.listdir("CoreLights")
 
     if lights.lightSetup == "Home":
-        for i in subDirs:
-            if i == "All":
-                subDir = os.path.join("CoreLights", i)
-                coreLightFilesRaw = os.listdir(subDir)
-                break
+        subDir = os.path.join("CoreLights", "All")
+        coreLightFilesRaw = os.listdir(subDir)
     elif lights.lightSetup == "Out":
-        for i in subDirs:
-            if i == "Portable":
-                subDir = os.path.join("CoreLights", i)
-                coreLightFilesRaw = os.listdir(subDir)
-                break
+        subDir = os.path.join("CoreLights", "Portable")
+        coreLightFilesRaw = os.listdir(subDir)
 
     for i in coreLightFilesRaw:
         if i.endswith(".txt"):
             coreLightFiles.append(i)
 
-    coreLightFiles.reverse()
+        coreLightFiles.sort()
 
     for i in range(0, len(coreLightFiles)):
         fileName = str(coreLightFiles[i])
@@ -725,13 +726,11 @@ def multiPresetButtons(output, xPos, yPos):
         xPosition = startX + colNumber * spacing
         yPosition = yPos + rowNumber * rowGap
 
-        def testFunc():
-            print("Hola!")
-
         if mode == "edit":
             saveB = top.btn("No Panel", "Save", "gray",
-                            functools.partial(presets.savePreset, str(i + 1)))
-            loadB = top.btn("No Panel", presetName, "gray", testFunc)
+                            functools.partial(readWrite.saveScene, fileName))
+            loadB = top.btn("No Panel", presetName, "gray",
+                            functools.partial(readWrite.loadScene, fileName))
 
             output.presetB.append({"SaveB": saveB, "LoadB": loadB})
             output.presetB[i]["SaveB"].place(x=xPosition,
@@ -742,7 +741,8 @@ def multiPresetButtons(output, xPos, yPos):
             output.presetB[i]["LoadB"].config(width=10)
 
         elif mode == "safe":
-            loadB = top.btn("No Panel", presetName, "gray", testFunc)
+            loadB = top.btn("No Panel", presetName, "gray",
+                            functools.partial(readWrite.loadScene, fileName))
 
             output.presetB.append({"LoadB": loadB})
             output.presetB[i]["LoadB"].place(x=xPosition, y=yPosition)
@@ -805,8 +805,8 @@ for i in range(0, 6):
 expl = top.text((sW / 2),
                 sH * 0.2,
                 "Hue 0-359\
-                                        Sat 0-100\
-                                        Brightness 0-100\
+                                        Sat 1-100\
+                                        Brightness 1-100\
                                         Temp 1700-6500",
                 "aquamarine", "No Panel")
 

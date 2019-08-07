@@ -702,7 +702,7 @@ def multiPresetButtons(output, xPos, yPos):
         if i.endswith(".txt"):
             coreSavedFiles.append(i)
 
-    coreSavedFiles.reverse()
+    coreSavedFiles.sort()
 
     for i in range(0, len(coreSavedFiles)):
         fileName = str(coreSavedFiles[i])
