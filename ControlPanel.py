@@ -264,12 +264,17 @@ audio.audioLoader(media.effects, audio.effects)
 class Lights():
 
     # Light physical IDs
-    standHigh = "0x0000000007e71dfa"
-    standMid = "0x0000000007e74620"
-    standLow = "0x0000000007e71ffd"
-    clip1 = ""
-    clip2 = ""
-    clip3 = ""
+
+    # standHigh = "0x0000000007e71dfa"
+    # standMid = "0x0000000007e74620"
+    # standLow = "0x0000000007e71ffd"
+    # clip1 = ""
+    # clip2 = ""
+    # clip3 = ""
+
+    clip1 = "0x0000000007e71dfa"
+    clip2 = "0x0000000007e74620"
+    clip3 = "0x0000000007e71ffd"
 
     def __init__(self, lightCount):
         self.bulbList = list()
@@ -284,8 +289,6 @@ class Lights():
             self.lightSetup = "Home"
 
     def discover(self):
-        global lightCount
-
         while len(self.bulbList) < lightCount:
             self.bulbList = yeelight.discover_bulbs(timeout=1)
         print(str(len(self.bulbList)) + " bulbs found")
@@ -298,51 +301,99 @@ class Lights():
         for i in range(0, len(self.bulbList)):
             bulbID = self.bulbList[i]["capabilities"]["id"]
 
-            if bulbID == Lights.clip1:
-                self.lt.append({"Light Name": "clip1",
-                                "LightObj": yeelight.Bulb(
-                                 self.bulbList[i]["ip"], effect=transition),
-                                "state": "off", "brightness": 100,
-                                "r": "?", "g": "?", "b": "?",
-                                "h": "?", "s": "?", "v": "?"})
-            elif bulbID == Lights.clip2:
-                self.lt.append({"Light Name": "clip2",
-                                "LightObj": yeelight.Bulb(
-                                 self.bulbList[i]["ip"], effect=transition)})
-            elif bulbID == Lights.clip3:
-                self.lt.append({"Light Name": "clip3",
-                                "LightObj": yeelight.Bulb(
-                                 self.bulbList[i]["ip"], effect=transition)})
-            elif bulbID == Lights.standHigh:
-                self.lt.append({"Light Name": "standHigh",
-                                "LightObj": yeelight.Bulb(
-                                 self.bulbList[i]["ip"], effect=transition)})
-            elif bulbID == Lights.standMid:
-                self.lt.append({"Light Name": "standMid",
-                                "LightObj": yeelight.Bulb(
-                                 self.bulbList[i]["ip"], effect=transition)})
-            elif bulbID == Lights.standLow:
-                self.lt.append({"Light Name": "standLow",
-                                "LightObj": yeelight.Bulb(
-                                 self.bulbList[i]["ip"], effect=transition)})
+            if self.lightSetup == "Out" or self.lightSetup == "Home":
+                if bulbID == Lights.clip1:
+                    self.lt.append({"Light Name": "clip1",
+                                    "LightObj": yeelight.Bulb(
+                                     self.bulbList[i]["ip"],
+                                     effect=transition),
+                                    "state": "off", "mode": "temp",
+                                    "temp": 5000, "brightness": 100,
+                                    "h": 30, "s": 100})
+                elif bulbID == Lights.clip2:
+                    self.lt.append({"Light Name": "clip2",
+                                    "LightObj": yeelight.Bulb(
+                                     self.bulbList[i]["ip"],
+                                     effect=transition),
+                                    "state": "off", "mode": "temp",
+                                    "temp": 5000, "brightness": 100,
+                                    "h": 30, "s": 100})
+                elif bulbID == Lights.clip3:
+                    self.lt.append({"Light Name": "clip3",
+                                    "LightObj": yeelight.Bulb(
+                                     self.bulbList[i]["ip"],
+                                     effect=transition),
+                                    "state": "off", "mode": "temp",
+                                    "temp": 5000, "brightness": 100,
+                                    "h": 30, "s": 100})
+
+            if self.lightSetup == "Home":
+                if bulbID == Lights.standHigh:
+                    self.lt.append({"Light Name": "standHigh",
+                                    "LightObj": yeelight.Bulb(
+                                     self.bulbList[i]["ip"],
+                                     effect=transition),
+                                    "state": "off", "mode": "temp",
+                                    "temp": 5000, "brightness": 100,
+                                    "h": 30, "s": 100})
+                elif bulbID == Lights.standMid:
+                    self.lt.append({"Light Name": "standMid",
+                                    "LightObj": yeelight.Bulb(
+                                     self.bulbList[i]["ip"],
+                                     effect=transition),
+                                    "state": "off", "mode": "temp",
+                                    "temp": 5000, "brightness": 100,
+                                    "h": 30, "s": 100})
+                elif bulbID == Lights.standLow:
+                    self.lt.append({"Light Name": "standLow",
+                                    "LightObj": yeelight.Bulb(
+                                     self.bulbList[i]["ip"],
+                                     effect=transition),
+                                    "state": "off", "mode": "temp",
+                                    "temp": 5000, "brightness": 100,
+                                    "h": 30, "s": 100})
+
+    def nudge(self):
+        for i in range(0, len(self.lt)):
+            self.lt[i]["LightObj"].get_properties()
 
     def allOn(self):
         for i in range(0, len(self.lt)):
+            light = self.lt[i]
+            self.lt[i].update({"state": "on"})
             self.lt[i]["LightObj"].turn_on()
-            self.lt[i]
+
+            if light["mode"] == "hsv":
+                light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
+                                          int(light["brightness"]))
+
+            elif light["mode"] == "temp":
+                light["LightObj"].set_color_temp(int(light["temp"]))
+                light["LightObj"].set_brightness(int(light["brightness"]))
 
     def allOff(self):
         for i in range(0, len(self.lt)):
+            self.lt[i].update({"state": "off"})
             self.lt[i]["LightObj"].turn_off()
 
     def on(self, lightName):
         for i in range(0, len(self.lt)):
             if self.lt[i]["Light Name"] == lightName:
+                light = self.lt[i]
+                light.update({"state": "on"})
                 self.lt[i]["LightObj"].turn_on()
+                if light["mode"] == "hsv":
+                    light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
+                                              int(light["brightness"]))
+
+                elif light["mode"] == "temp":
+                    light["LightObj"].set_color_temp(int(light["temp"]))
+                    light["LightObj"].set_brightness(int(light["brightness"]))
 
     def off(self, lightName):
         for i in range(0, len(self.lt)):
             if self.lt[i]["Light Name"] == lightName:
+                self.lt[i].update({"state": "off"})
                 self.lt[i]["LightObj"].turn_off()
 
     def change(self, lightName, r, g, b, brightness):
@@ -350,6 +401,36 @@ class Lights():
             if self.lt[i]["Light Name"] == lightName:
                 self.lt[i]["LightObj"].set_rgb(r, g, b)
                 self.lt[i]["LightObj"].set_brightness(brightness)
+
+    def updateHSV(self, lightName, h, s, v):
+        for i in range(0, len(self.lt)):
+            if self.lt[i]["Light Name"] == lightName:
+                self.lt[i].update({"state": "on", "mode": "hsv",
+                                   "h": h, "s": s, "brightness": v})
+
+    def updateTemp(self, lightName, temp, br):
+        for i in range(0, len(self.lt)):
+            if self.lt[i]["Light Name"] == lightName:
+                self.lt[i].update({"state": "on", "mode": "temp",
+                                   "temp": temp, "brightness": br})
+
+    def sendSettings(self):
+        for i in range(0, len(self.lt)):
+            light = self.lt[i]
+
+            if self.lt[i]["state"] == "on":
+                light["LightObj"].turn_on()
+
+                if light["mode"] == "hsv":
+                    light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
+                                              int(light["brightness"]))
+
+                elif light["mode"] == "temp":
+                    light["LightObj"].set_color_temp(int(light["temp"]))
+                    light["LightObj"].set_brightness(int(light["brightness"]))
+
+            elif self.lt[i]["state"] == "off":
+                light["LightObj"].turn_off()
 
 
 lights = Lights(lightCount)
@@ -455,8 +536,6 @@ class Display():
         self.presetB = list()
 
     def newFrCan(self, xPos, yPos, w, h, col, panel="No Panel"):
-        global root
-
         self.f.update({panel: tk.Frame(root, width=w, height=h, bg=col)})
         self.f[panel].place(x=xPos, y=yPos)
 
@@ -487,10 +566,6 @@ class Display():
     def trackCtrlBox(self,
                      xPos, yPos, hlbg,
                      track, vlcObj, audInst, audioList, panel="No Panel"):
-
-        global sW
-        global sH
-        global space
 
         gap = 8
         panelWidth = sW * 0.8
@@ -618,9 +693,6 @@ def multiMenuButtons(source, output, hlbg):
 
 
 def multiPresetButtons(output, xPos, yPos):
-    global audio
-    global mode
-
     startX = xPos
     spacing = (sW - startX) / 12
     coreSavedFilesRaw = os.listdir("CoreSaved")
@@ -667,10 +739,6 @@ def multiPresetButtons(output, xPos, yPos):
 
 
 def multiControlBoxes(output, audInst, audioList):
-    global sW
-    global sH
-    global space
-
     gap = 8
     columnNumber = 0
     rowNumber = 0
