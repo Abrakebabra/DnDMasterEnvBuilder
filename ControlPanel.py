@@ -4,7 +4,49 @@ import functools  # to pass a function with parameters into tkinter button
 import time  # code runs faster than vlc can load.  Adds 0.01s delay
 import ast  # to turn string into code that can be evaluated for saved files
 import vlc  # audio
-import yeelight  # lights
+import LightHandler  # Other program written to handle lights - Classes only
+
+
+# color control
+
+# top master bar
+topCol = "gray"
+topTCol = "yellow"
+# audio presets bar
+audBarCol = "gray"
+audTBarCol = "aquamarine"
+
+# lights bar
+ltBarCol = "slate gray"
+ltTBarCol = "yellow"
+
+# events bar
+evntBarCol = "gray"
+evntTBarCol = "aquamarine"
+
+# panel selection bar
+pnlBarCol = "cyan"
+
+# panels
+pnlCol = "LightSteelBlue4"
+pnlTCol = "LightBlue2"
+
+# control box stopped
+ctrlStopCol = "dark slate blue"
+ctrlTStopCol = "LightBlue1"
+
+# control box playing
+ctrlPlayCol = "sea green"
+ctrlTPlayCol = "LightBlue1"
+
+# control box selected
+ctrlSelCol = "SteelBlue1"
+ctrlTSelCol = "LightBlue1"
+
+# control box selected and playing
+ctrlSelPlayCol = "seagreen1"
+ctrlTSelPlayCol = "steel blue"
+
 
 
 mode = str()
@@ -47,7 +89,7 @@ def lightF():
 # lightF()
 
 mode = "game"
-lightCount = 0
+lightCount = 3
 
 
 class Media():
@@ -245,13 +287,13 @@ class Audio():
                         "track": trackObj["track"],
                         "volume": trackObj["volume"]}
 
-                if data not in presets.cData:
-                    presets.cData.append(data)
+                if data not in audioRdWrt.audSel:
+                    audioRdWrt.audSel.append(data)
 
     def removeTrack(self, track):
-        for i in range(0, len(presets.cData)):
-            if presets.cData[i]["track"] == track:
-                presets.cData.pop(i)
+        for i in range(0, len(audioRdWrt.audSel)):
+            if audioRdWrt.audSel[i]["track"] == track:
+                audioRdWrt.audSel.pop(i)
                 break
 
 
@@ -261,204 +303,22 @@ audio.audioLoader(media.sounds, audio.sounds)
 audio.audioLoader(media.effects, audio.effects)
 
 
-class Lights():
-
-    # Light physical IDs
-
-    # standHigh = "0x0000000007e71dfa"
-    # standMid = "0x0000000007e74620"
-    # standLow = "0x0000000007e71ffd"
-    # clip1 = ""
-    # clip2 = ""
-    # clip3 = ""
-
-    clip1 = "0x0000000007e71dfa"
-    clip2 = "0x0000000007e74620"
-    clip3 = "0x0000000007e71ffd"
-
-    def __init__(self, lightCount):
-        self.bulbList = list()
-        self.lt = list()
-        self.lightSetup = str()
-
-        if lightCount == 0:
-            self.lightSetup = "None"
-        elif lightCount == 3:
-            self.lightSetup = "Out"
-        elif lightCount == 6:
-            self.lightSetup = "Home"
-
-    def discover(self):
-        while len(self.bulbList) < lightCount:
-            self.bulbList = yeelight.discover_bulbs(timeout=1)
-        print(str(len(self.bulbList)) + " bulbs found")
-
-    def assign(self, transition="smooth"):
-        # transition can be "smooth" at 300ms or "sudden"
-        Lights.lt = list()  # clear assignment
-
-        # assigns bulbs independent of IP address
-        for i in range(0, len(self.bulbList)):
-            bulbID = self.bulbList[i]["capabilities"]["id"]
-
-            if self.lightSetup == "Out" or self.lightSetup == "Home":
-                if bulbID == Lights.clip1:
-                    self.lt.append({"Light Name": "clip1",
-                                    "LightObj": yeelight.Bulb(
-                                     self.bulbList[i]["ip"],
-                                     effect=transition),
-                                    "state": "off", "mode": "temp",
-                                    "temp": 5000, "brightness": 100,
-                                    "h": 30, "s": 100})
-                elif bulbID == Lights.clip2:
-                    self.lt.append({"Light Name": "clip2",
-                                    "LightObj": yeelight.Bulb(
-                                     self.bulbList[i]["ip"],
-                                     effect=transition),
-                                    "state": "off", "mode": "temp",
-                                    "temp": 5000, "brightness": 100,
-                                    "h": 30, "s": 100})
-                elif bulbID == Lights.clip3:
-                    self.lt.append({"Light Name": "clip3",
-                                    "LightObj": yeelight.Bulb(
-                                     self.bulbList[i]["ip"],
-                                     effect=transition),
-                                    "state": "off", "mode": "temp",
-                                    "temp": 5000, "brightness": 100,
-                                    "h": 30, "s": 100})
-
-            if self.lightSetup == "Home":
-                if bulbID == Lights.standHigh:
-                    self.lt.append({"Light Name": "standHigh",
-                                    "LightObj": yeelight.Bulb(
-                                     self.bulbList[i]["ip"],
-                                     effect=transition),
-                                    "state": "off", "mode": "temp",
-                                    "temp": 5000, "brightness": 100,
-                                    "h": 30, "s": 100})
-                elif bulbID == Lights.standMid:
-                    self.lt.append({"Light Name": "standMid",
-                                    "LightObj": yeelight.Bulb(
-                                     self.bulbList[i]["ip"],
-                                     effect=transition),
-                                    "state": "off", "mode": "temp",
-                                    "temp": 5000, "brightness": 100,
-                                    "h": 30, "s": 100})
-                elif bulbID == Lights.standLow:
-                    self.lt.append({"Light Name": "standLow",
-                                    "LightObj": yeelight.Bulb(
-                                     self.bulbList[i]["ip"],
-                                     effect=transition),
-                                    "state": "off", "mode": "temp",
-                                    "temp": 5000, "brightness": 100,
-                                    "h": 30, "s": 100})
-
-    def nudge(self):
-        for i in range(0, len(self.lt)):
-            self.lt[i]["LightObj"].get_properties()
-
-    def allOn(self):
-        for i in range(0, len(self.lt)):
-            light = self.lt[i]
-            self.lt[i].update({"state": "on"})
-            self.lt[i]["LightObj"].turn_on()
-
-            if light["mode"] == "hsv":
-                light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
-                                          int(light["brightness"]))
-
-            elif light["mode"] == "temp":
-                light["LightObj"].set_color_temp(int(light["temp"]))
-                light["LightObj"].set_brightness(int(light["brightness"]))
-
-    def allOff(self):
-        for i in range(0, len(self.lt)):
-            self.lt[i].update({"state": "off"})
-            self.lt[i]["LightObj"].turn_off()
-
-    def on(self, lightName):
-        for i in range(0, len(self.lt)):
-            if self.lt[i]["Light Name"] == lightName:
-                light = self.lt[i]
-                light.update({"state": "on"})
-                self.lt[i]["LightObj"].turn_on()
-                if light["mode"] == "hsv":
-                    light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
-                                              int(light["brightness"]))
-
-                elif light["mode"] == "temp":
-                    light["LightObj"].set_color_temp(int(light["temp"]))
-                    light["LightObj"].set_brightness(int(light["brightness"]))
-
-    def off(self, lightName):
-        for i in range(0, len(self.lt)):
-            if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"state": "off"})
-                self.lt[i]["LightObj"].turn_off()
-
-    def change(self, lightName, r, g, b, brightness):
-        for i in range(0, len(self.lt)):
-            if self.lt[i]["Light Name"] == lightName:
-                self.lt[i]["LightObj"].set_rgb(r, g, b)
-                self.lt[i]["LightObj"].set_brightness(brightness)
-
-    def updateHSV(self, lightName, h, s, v):
-        for i in range(0, len(self.lt)):
-            if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"state": "on", "mode": "hsv",
-                                   "h": h, "s": s, "brightness": v})
-
-    def updateTemp(self, lightName, temp, br):
-        for i in range(0, len(self.lt)):
-            if self.lt[i]["Light Name"] == lightName:
-                self.lt[i].update({"state": "on", "mode": "temp",
-                                   "temp": temp, "brightness": br})
-
-    def sendSettings(self):
-        for i in range(0, len(self.lt)):
-            light = self.lt[i]
-
-            if self.lt[i]["state"] == "on":
-                light["LightObj"].turn_on()
-
-                if light["mode"] == "hsv":
-                    light["LightObj"].set_hsv(int(light["h"]), int(light["s"]),
-                                              int(light["brightness"]))
-
-                elif light["mode"] == "temp":
-                    light["LightObj"].set_color_temp(int(light["temp"]))
-                    light["LightObj"].set_brightness(int(light["brightness"]))
-
-            elif self.lt[i]["state"] == "off":
-                light["LightObj"].turn_off()
-
-
-lights = Lights(lightCount)
+lights = LightHandler.Lights(lightCount)
 lights.discover()
 lights.assign()
 
 
-def testLight():
-    lights.on("standHigh")
-    lights.on("standMid")
-    lights.on("standLow")
-    lights.change("standHigh", 255, 0, 0, 100)
-    lights.change("standMid", 255, 0, 0, 100)
-    lights.change("standLow", 255, 0, 0, 100)
-
-
-class Presets():
+class AudioReadWrite():
 
     def __init__(self):
-        self.cData = list()
-        self.presets = list()
+        self.audSel = list()
 
-    def playCurrent(self):
+    def playAudSel(self):
         audio.stopAll()
-        for i in range(0, len(self.cData)):
-            audioList = self.cData[i]["audioList"]
-            track = self.cData[i]["track"]
-            volume = self.cData[i]["volume"]
+        for i in range(0, len(self.audSel)):
+            audioList = self.audSel[i]["audioList"]
+            track = self.audSel[i]["track"]
+            volume = self.audSel[i]["volume"]
 
             for j in range(0, len(audioList)):
                 if audioList[j]["track"] == track:
@@ -466,15 +326,15 @@ class Presets():
                     audio.play(audioList, track)
                     break
 
-    def clearCurrent(self):
-        self.cData = list()
+    def clearAudSel(self):
+        self.audSel = list()
 
-    def savePreset(self, saveFile):
+    def saveAudSel(self, saveFile):
         dataLoad = dict()
         cDataNoObject = list()
-        for i in range(0, len(self.cData)):
+        for i in range(0, len(self.audSel)):
             trackData = dict()
-            for k, v in self.cData[i].items():
+            for k, v in self.audSel[i].items():
                 if k != "audioList":
                     trackData.update({k: v})
             cDataNoObject.append(trackData)
@@ -487,29 +347,29 @@ class Presets():
 
         print("Saved!")
 
-    def loadPreset(self, audioInst, saveFile):
+    def loadAudSel(self, audioInst, saveFile):
         filePath = os.path.join("CoreSaved", saveFile)
-        self.cData = list()
+        self.audSel = list()
         data = dict()
 
         with open(filePath, "r") as f:
             data = ast.literal_eval(f.read())
 
-        self.cData = data["Data"]
+        self.audSel = data["Data"]
         aLists = [audioInst.music, audioInst.sounds, audioInst.effects]
 
-        for i in range(0, len(self.cData)):
+        for i in range(0, len(self.audSel)):
             for j in range(0, len(aLists)):
                 for k in range(0, len(aLists[j])):
-                    if self.cData[i]["track"] == aLists[j][k]["track"]:
-                        self.cData[i].update({"audioList": aLists[j]})
+                    if self.audSel[i]["track"] == aLists[j][k]["track"]:
+                        self.audSel[i].update({"audioList": aLists[j]})
                         break
 
-        self.playCurrent()
+        self.playAudSel()
 
 
-presets = Presets()
-
+audioRdWrt = AudioReadWrite()
+lightRdWrt = LightHandler.LightReadWrite(lights)
 
 root = tk.Tk()
 getScreenWidth = root.winfo_screenwidth()
@@ -533,7 +393,8 @@ class Display():
         self.pb = dict()  # buttons are all unique so no need for list
         self.ab = list()  # may have identical names so list required
         self.controlBox = list()  # holds each track control box
-        self.presetB = list()
+        self.presetB = list()  # audio environment buttons
+        self.sceneB = list()  # light environment buttons
 
     def newFrCan(self, xPos, yPos, w, h, col, panel="No Panel"):
         self.f.update({panel: tk.Frame(root, width=w, height=h, bg=col)})
@@ -576,10 +437,10 @@ class Display():
         panelElements = dict()  # holds current button dict info
 
         outline = self.rect(xPos, yPos, boxWidth, boxHeight,
-                            "maroon", panel)  # box outline
+                            ctrlStopCol, panel)  # box outline
 
         trackName = self.text(xPos + boxWidth * 0.5, yPos + 20,
-                              track, "LightBlue1", panel)  # track
+                              track, ctrlTStopCol, panel)  # track
 
         selectTrack = self.btn(panel, "Select", hlbg,
                                functools.partial(audInst.selectTrack,
@@ -650,19 +511,20 @@ class Display():
 
             loaded = False
 
-            for j in range(0, len(presets.cData)):
-                if presets.cData[j]["track"] == self.controlBox[i]["track"]:
+            for j in range(0, len(audioRdWrt.audSel)):
+                if audioRdWrt.audSel[j]["track"] ==\
+                   self.controlBox[i]["track"]:
                     loaded = True
                     break
 
             if statePlaying is True and loaded is True:
-                object(panel, i, "seagreen1", "steel blue")
+                object(panel, i, ctrlSelPlayCol, ctrlTSelPlayCol)
             elif statePlaying is True:
-                object(panel, i, "sea green", "LightBlue1")
+                object(panel, i, ctrlPlayCol, ctrlTPlayCol)
             elif loaded is True:
-                object(panel, i, "SteelBlue1", "LightBlue1")
+                object(panel, i, ctrlSelCol, ctrlTSelCol)
             else:
-                object(panel, i, "dark slate blue", "LightBlue1")
+                object(panel, i, ctrlStopCol, ctrlTStopCol)
 
     @classmethod
     def windowClosed(cls):
@@ -686,7 +548,7 @@ def multiTextLabels(source, output, x, y, col):
 def multiMenuButtons(source, output, hlbg):
     for i in range(0, len(source.f.keys())):
         frameKey = [key for key in source.f.keys()][i]
-        output.panelButton(8 + 90 * i, 15,
+        output.panelButton(8 + 90 * i, space * 5 + 15,
                            frameKey, hlbg,
                            functools.partial(source.raiseFrame,
                                              source.f, frameKey))
@@ -714,10 +576,10 @@ def multiPresetButtons(output, xPos, yPos):
         presetName = data["Preset Name"]
 
         if mode == "create":
-            saveB = top.btn("No Panel", "Save", "pink",
-                            functools.partial(presets.savePreset, fileName))
-            loadB = top.btn("No Panel", presetName, "pink",
-                            functools.partial(presets.loadPreset,
+            saveB = top.btn("No Panel", "Save", audBarCol,
+                            functools.partial(audioRdWrt.saveAudSel, fileName))
+            loadB = top.btn("No Panel", presetName, audBarCol,
+                            functools.partial(audioRdWrt.loadAudSel,
                                               audio, fileName))
 
             output.presetB.append({"SaveB": saveB, "LoadB": loadB})
@@ -729,8 +591,8 @@ def multiPresetButtons(output, xPos, yPos):
             output.presetB[i]["LoadB"].config(width=10)
 
         elif mode == "game":
-            loadB = top.btn("No Panel", presetName, "pink",
-                            functools.partial(presets.loadPreset,
+            loadB = top.btn("No Panel", presetName, audBarCol,
+                            functools.partial(audioRdWrt.loadAudSel,
                                               audio, fileName))
 
             output.presetB.append({"LoadB": loadB})
@@ -766,73 +628,130 @@ def multiControlBoxes(output, audInst, audioList):
         track = audioList[i]["track"]
         vlcObj = audioList[i]["vlcObj"]
 
-        output.trackCtrlBox(xPosition, yPosition, "red",
+        output.trackCtrlBox(xPosition, yPosition, ctrlStopCol,
                             track, vlcObj, audInst, audioList, currentPanel)
 
         rowNumber += 1
 
 
+def multiSceneButtons(output, xPos, yPos):
+    coreLightFilesRaw = list()
+    coreLightFiles = list()
+    startX = xPos
+    spacing = (sW - startX) / 12
+    rowGap = 50
+    colNumber = 0
+    rowNumber = 0
+
+    if lights.lightSetup == "Home":
+        subDir = os.path.join("CoreLights", "All")
+        coreLightFilesRaw = os.listdir(subDir)
+    elif lights.lightSetup == "Out":
+        subDir = os.path.join("CoreLights", "Portable")
+        coreLightFilesRaw = os.listdir(subDir)
+
+    for i in coreLightFilesRaw:
+        if i.endswith(".txt"):
+            coreLightFiles.append(i)
+
+        coreLightFiles.sort()
+
+    for i in range(0, len(coreLightFiles)):
+        fileName = str(coreLightFiles[i])
+        filePath = str()
+        if lights.lightSetup == "Home":
+            filePath = os.path.join("CoreLights/All", fileName)
+        elif lights.lightSetup == "Out":
+            filePath = os.path.join("CoreLights/Portable", fileName)
+
+        sceneName = str()
+        data = dict()
+        with open(filePath, "r") as f:
+            data = ast.literal_eval(f.read())
+        sceneName = data["Scene Name"]
+
+        if colNumber >= 12:
+            rowNumber += 1
+            colNumber = 0
+
+        xPosition = startX + colNumber * spacing
+        yPosition = yPos + rowNumber * rowGap
+
+        loadB = top.btn("No Panel", sceneName, ltBarCol,
+                        functools.partial(lightRdWrt.loadScene, fileName))
+
+        output.sceneB.append({"LoadB": loadB})
+        output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
+        output.sceneB[i]["LoadB"].config(width=10)
+
+        colNumber += 1
+
+
+# Top canvas
 top = Display()
-top.newFrCan(0, 0, sW, space * 5, "grey")
+top.newFrCan(0, 0, sW, space * 6, topCol)
 
-top.text(50, 25, "Master", "yellow")
-
-top.rect(0, space, sW, space * 2, "pink")
-top.text(50, 75, "Presets", "yellow")
-
-playPreset = top.btn("No Panel", "Play", "grey", presets.playCurrent)
+# Top master bar
+top.text(50, 25, "Master", topTCol)
+playPreset = top.btn("No Panel", "Play", topCol, audioRdWrt.playAudSel)
 playPreset.place(x=100, y=15)
 playPreset.config(width=7)
-clearPreset = top.btn("No Panel", "Clear", "grey", presets.clearCurrent)
+clearPreset = top.btn("No Panel", "Clear", topCol, audioRdWrt.clearAudSel)
 clearPreset.place(x=200, y=15)
 clearPreset.config(width=7)
-stopAll = top.btn("No Panel", "Silence!", "grey", audio.stopAll)
+stopAll = top.btn("No Panel", "Silence!", topCol, audio.stopAll)
 stopAll.place(x=300, y=15)
 stopAll.config(width=7)
 
-megaRed = top.btn("No Panel", "RED!", "orange", testLight)
-megaRed.place(x=100, y=150)
-megaRed.config(width=7)
-
+# Top sound bar
+top.rect(0, space, sW, space * 2, audBarCol)
+top.text(50, 75, "Sound", audTBarCol)
 multiPresetButtons(top, 100, 65)
 
-top.rect(0, space * 2, sW, space * 2, "orange")
-top.text(50, 150, "Lights", "blue")
+# Top light bar
+top.rect(0, space * 2, sW, space, ltBarCol)
+top.text(50, 125, "Lights", ltTBarCol)
+multiSceneButtons(top, 100, 115)
 
-top.rect(0, space * 4, sW, space, "pink")
-top.text(50, space * 4 + space / 2, "Events", "blue")
+# Top events bar
+top.rect(0, space * 4, sW, space, evntBarCol)
+top.text(50, space * 4 + space / 2, "Events", evntTBarCol)
 
+# Panel menu rectangle
+top.rect(0, space * 5, sW, space, pnlBarCol)
 
-soundBar = Display()
-soundBar.newFrCan(0, space * 5, sW, space, "slate gray")
+# Sound menu bar
+# soundBar = Display()
+# soundBar.newFrCan(0, space * 5, sW, space, "slate gray")
 
+# Sound panels
 soundPanel = Display()
 
 multiPanel(media.music, soundPanel,
            0, space * 6,
            sW, sH - space * 6,
-           "LightSteelBlue4")
+           pnlCol)
 
 multiPanel(media.sounds, soundPanel,
            0, space * 6,
            sW, sH - space * 6,
-           "LightSteelBlue4")
+           pnlCol)
 
 multiPanel(media.effects, soundPanel,
            0, space * 6,
            sW, sH - space * 6,
-           "LightSteelBlue4")
+           pnlCol)
 
-multiMenuButtons(soundPanel, soundBar, "slate gray")
-multiTextLabels(media.music, soundPanel, 50, 8, "LightBlue2")
+multiMenuButtons(soundPanel, top, pnlBarCol)
+multiTextLabels(media.music, soundPanel, 50, 8, pnlTCol)
 multiControlBoxes(soundPanel, audio, audio.music)
 
-multiMenuButtons(soundPanel, soundBar, "slate gray")
-multiTextLabels(media.sounds, soundPanel, 50, 8, "LightBlue2")
+multiMenuButtons(soundPanel, top, pnlBarCol)
+multiTextLabels(media.sounds, soundPanel, 50, 8, pnlTCol)
 multiControlBoxes(soundPanel, audio, audio.sounds)
 
-multiMenuButtons(soundPanel, soundBar, "slate gray")
-multiTextLabels(media.effects, soundPanel, 50, 8, "LightBlue2")
+multiMenuButtons(soundPanel, top, pnlBarCol)
+multiTextLabels(media.effects, soundPanel, 50, 8, pnlTCol)
 multiControlBoxes(soundPanel, audio, audio.effects)
 
 
