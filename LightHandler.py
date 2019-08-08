@@ -232,8 +232,7 @@ class LightReadWrite():
                 break
 
         if sceneSaveOK is True:
-            dataLoad.update({"Scene Name": sceneName,
-                             "Data": onlyData})
+            dataLoad.update({"Scene Name": sceneName, "Data": onlyData})
             filePath = os.path.join(subDir, saveFile)
 
             with open(filePath, "w") as f:

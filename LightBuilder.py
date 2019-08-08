@@ -542,7 +542,7 @@ expl = top.text((sW / 2),
                 "aquamarine", "No Panel")
 
 
-multiSceneButtons(top, 100, sH * 0.7)
+multiSceneButtons(top, sW * 0.02, sH * 0.7)
 
 
 lightControl = Display()

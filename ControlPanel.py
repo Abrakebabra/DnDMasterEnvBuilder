@@ -48,7 +48,6 @@ ctrlSelPlayCol = "seagreen1"
 ctrlTSelPlayCol = "steel blue"
 
 
-
 mode = str()
 
 
@@ -85,11 +84,8 @@ def lightF():
             inputLoop = False
 
 
-# modeF()
-# lightF()
-
-mode = "game"
-lightCount = 3
+modeF()
+lightF()
 
 
 class Media():
@@ -260,6 +256,13 @@ class Audio():
             elif self.effects == audioList:
                 self.stop(self.effects, track)
 
+    def pause(self):
+        for i in range(0, len(self.active)):
+            if self.active[i]["vlcObj"].get_state() == vlc.State.Playing:
+                self.active[i]["vlcObj"].pause()
+            else:
+                self.active[i]["vlcObj"].play()
+
     def statusCheck(self):
         checkList = list()
 
@@ -339,13 +342,25 @@ class AudioReadWrite():
                     trackData.update({k: v})
             cDataNoObject.append(trackData)
         print("Enter preset name:")
-        dataLoad.update({"Preset Name": input(), "Data": cDataNoObject})
-        filePath = os.path.join("CoreSaved", saveFile)
+        presetName = input()
+        presetSaveOK = False
 
-        with open(filePath, "w") as f:
-            f.write(str(dataLoad))
+        while presetSaveOK is False:
+            print(str(presetName) + " is ok?  Confirm:  y / n")
+            sceneEntry = input()
+            if sceneEntry == "y":
+                presetSaveOK = True
+            elif sceneEntry == "n":
+                break
 
-        print("Saved!")
+        if presetSaveOK is True:
+            dataLoad.update({"Preset Name": presetName, "Data": cDataNoObject})
+            filePath = os.path.join("CoreSaved", saveFile)
+
+            with open(filePath, "w") as f:
+                f.write(str(dataLoad))
+
+            print("Saved!")
 
     def loadAudSel(self, audioInst, saveFile):
         filePath = os.path.join("CoreSaved", saveFile)
@@ -624,7 +639,7 @@ def multiControlBoxes(output, audInst, audioList):
         boxWidth = (panelWidth - gap * 6) / 3
 
         xPosition = gap + columnNumber * (boxWidth + gap)
-        yPosition = gap * 2 + rowNumber * (boxHeight + gap)
+        yPosition = 10 + gap * 2 + rowNumber * (boxHeight + gap)
         track = audioList[i]["track"]
         vlcObj = audioList[i]["vlcObj"]
 
@@ -695,13 +710,17 @@ top.newFrCan(0, 0, sW, space * 6, topCol)
 top.text(50, 25, "Master", topTCol)
 playPreset = top.btn("No Panel", "Play", topCol, audioRdWrt.playAudSel)
 playPreset.place(x=100, y=15)
-playPreset.config(width=7)
+playPreset.config(width=8)
+pauseAll = top.btn("No Panel", "Un|Pause", topCol, audio.pause)
+pauseAll.place(x=200, y=15)
+pauseAll.config(width=8)
 clearPreset = top.btn("No Panel", "Clear", topCol, audioRdWrt.clearAudSel)
-clearPreset.place(x=200, y=15)
-clearPreset.config(width=7)
+clearPreset.place(x=300, y=15)
+clearPreset.config(width=8)
 stopAll = top.btn("No Panel", "Silence!", topCol, audio.stopAll)
-stopAll.place(x=300, y=15)
-stopAll.config(width=7)
+stopAll.place(x=400, y=15)
+stopAll.config(width=8)
+
 
 # Top sound bar
 top.rect(0, space, sW, space * 2, audBarCol)
@@ -714,8 +733,8 @@ top.text(50, 125, "Lights", ltTBarCol)
 multiSceneButtons(top, 100, 115)
 
 # Top events bar
-top.rect(0, space * 4, sW, space, evntBarCol)
-top.text(50, space * 4 + space / 2, "Events", evntTBarCol)
+# top.rect(0, space * 4, sW, space, evntBarCol)
+# top.text(50, space * 4 + space / 2, "Events", evntTBarCol)
 
 # Panel menu rectangle
 top.rect(0, space * 5, sW, space, pnlBarCol)
@@ -743,15 +762,15 @@ multiPanel(media.effects, soundPanel,
            pnlCol)
 
 multiMenuButtons(soundPanel, top, pnlBarCol)
-multiTextLabels(media.music, soundPanel, 50, 8, pnlTCol)
+multiTextLabels(media.music, soundPanel, 50, 14, pnlTCol)
 multiControlBoxes(soundPanel, audio, audio.music)
 
 multiMenuButtons(soundPanel, top, pnlBarCol)
-multiTextLabels(media.sounds, soundPanel, 50, 8, pnlTCol)
+multiTextLabels(media.sounds, soundPanel, 50, 14, pnlTCol)
 multiControlBoxes(soundPanel, audio, audio.sounds)
 
 multiMenuButtons(soundPanel, top, pnlBarCol)
-multiTextLabels(media.effects, soundPanel, 50, 8, pnlTCol)
+multiTextLabels(media.effects, soundPanel, 50, 14, pnlTCol)
 multiControlBoxes(soundPanel, audio, audio.effects)
 
 
