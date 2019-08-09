@@ -488,6 +488,7 @@ def multiSceneButtons(output, xPos, yPos):
     rowGap = 100
     colNumber = 0
     rowNumber = 0
+    bCount = 0
 
     if lights.lightSetup == "Home":
         subDir = os.path.join("CoreLights", "All")
@@ -552,10 +553,11 @@ def multiSceneButtons(output, xPos, yPos):
                                                   lightControl, fileName))
 
                 output.sceneB.append({"LoadB": loadB})
-                output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
-                output.sceneB[i]["LoadB"].config(width=10)
+                output.sceneB[bCount]["LoadB"].place(x=xPosition, y=yPosition)
+                output.sceneB[bCount]["LoadB"].config(width=10)
 
                 colNumber += 1
+                bCount += 1
 
 
 top = Display()

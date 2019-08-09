@@ -584,7 +584,7 @@ def multiPresetButtons(output, xPos, yPos):
     rowGap = 100
     colNumber = 0
     rowNumber = 0
-    buttonCount = 0
+    bCount = 0
     buttonCol = row1BarCol
     coreSavedFilesRaw = os.listdir("CoreSaved")
     coreSavedFiles = list()
@@ -608,7 +608,7 @@ def multiPresetButtons(output, xPos, yPos):
             rowNumber += 1
             colNumber = 0
 
-        if buttonCount >= 12:
+        if bCount >= 12:
             buttonCol = row2BarCol
 
         xPosition = startX + colNumber * spacing
@@ -622,15 +622,15 @@ def multiPresetButtons(output, xPos, yPos):
                                               audio, fileName))
 
             output.presetB.append({"SaveB": saveB, "LoadB": loadB})
-            output.presetB[i]["SaveB"].place(x=xPosition,
-                                             y=yPosition - 12)
-            output.presetB[i]["SaveB"].config(width=10)
-            output.presetB[i]["LoadB"].place(x=xPosition,
-                                             y=yPosition + 11)
-            output.presetB[i]["LoadB"].config(width=10)
+            output.presetB[bCount]["SaveB"].place(x=xPosition,
+                                                  y=yPosition - 12)
+            output.presetB[bCount]["SaveB"].config(width=10)
+            output.presetB[bCount]["LoadB"].place(x=xPosition,
+                                                  y=yPosition + 11)
+            output.presetB[bCount]["LoadB"].config(width=10)
 
             colNumber += 1
-            buttonCount += 1
+            bCount += 1
 
         elif mode == "game":
             if len(data["Data"]) > 0:
@@ -639,14 +639,14 @@ def multiPresetButtons(output, xPos, yPos):
                                                   audio, fileName))
 
                 output.presetB.append({"LoadB": loadB})
-                output.presetB[i]["LoadB"].place(x=xPosition, y=yPosition)
-                output.presetB[i]["LoadB"].config(width=10)
+                output.presetB[bCount]["LoadB"].place(x=xPosition, y=yPosition)
+                output.presetB[bCount]["LoadB"].config(width=10)
 
                 colNumber += 1
-                buttonCount += 1
+                bCount += 1
 
     output.text(xPos - 50, yPos + 11, "Sound", soundTCol)
-    if buttonCount > 12:
+    if bCount > 12:
         output.text(xPos - 50, yPos + rowGap + 11, "Sound", soundTCol)
 
 
@@ -692,7 +692,7 @@ def multiSceneButtons(output, xPos, yPos):
     rowGap = 100
     colNumber = 0
     rowNumber = 0
-    buttonCount = 0
+    bCount = 0
     buttonCol = row1BarCol
 
     if lights.lightSetup == "Home":
@@ -726,7 +726,7 @@ def multiSceneButtons(output, xPos, yPos):
             rowNumber += 1
             colNumber = 0
 
-        if buttonCount >= 12:
+        if bCount >= 12:
             buttonCol = row2BarCol
 
         xPosition = startX + colNumber * spacing
@@ -742,14 +742,14 @@ def multiSceneButtons(output, xPos, yPos):
                             functools.partial(lightRdWrt.loadScene, fileName))
 
             output.sceneB.append({"LoadB": loadB})
-            output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
-            output.sceneB[i]["LoadB"].config(width=10)
+            output.sceneB[bCount]["LoadB"].place(x=xPosition, y=yPosition)
+            output.sceneB[bCount]["LoadB"].config(width=10)
 
             colNumber += 1
-            buttonCount += 1
+            bCount += 1
 
     output.text(xPos - 50, yPos + 11, "Lights", lightTCol)
-    if buttonCount > 12:
+    if bCount > 12:
         output.text(xPos - 50, yPos + rowGap + 11, "Lights", lightTCol)
 
 
@@ -790,18 +790,8 @@ if mode == "edit":
 
 multiSceneButtons(top, 100, lightBarYPos)
 
-
-
-# Top events bar
-# top.rect(0, space * 4, sW, space, evntBarCol)
-# top.text(50, space * 4 + space / 2, "Events", evntTBarCol)
-
 # Panel menu rectangle
 top.rect(0, space * 5, sW, space, pnlBarCol)
-
-# Sound menu bar
-# soundBar = Display()
-# soundBar.newFrCan(0, space * 5, sW, space, "slate gray")
 
 # Sound panels
 soundPanel = Display()
