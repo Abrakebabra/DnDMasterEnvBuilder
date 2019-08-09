@@ -10,15 +10,17 @@ import LightHandler  # Other program written to handle lights - Classes only
 # color control
 
 # top master bar
-topCol = "gray"
+topCol = "slate gray"
 topTCol = "yellow"
 # audio presets bar
-audBarCol = "gray"
-audTBarCol = "aquamarine"
+row1BarCol = "gray"
 
 # lights bar
-ltBarCol = "slate gray"
-ltTBarCol = "yellow"
+row2BarCol = "slate gray"
+
+# audio light text
+soundTCol = "aquamarine"
+lightTCol = "yellow"
 
 # events bar
 evntBarCol = "gray"
@@ -54,9 +56,9 @@ mode = str()
 def modeF():
     global mode
     while not mode:
-        print("\"create\" or \"game\" mode?")
+        print("\"edit\" or \"game\" mode?")
         modeEntry = input()
-        if modeEntry == "create":
+        if modeEntry == "edit":
             mode = modeEntry
         elif modeEntry == "game":
             mode = modeEntry
@@ -100,6 +102,7 @@ class Media():
     def getMedia(self, inputDir, varList):
         items = os.listdir(inputDir)
         subDirs = list()
+        items.sort()
 
         for i in items:
             if os.path.isdir(os.path.join(inputDir, i)):
@@ -117,13 +120,13 @@ class Media():
                     panelGroup.append({"panel": str(subDir),
                                        "track": str(trackName),
                                        "path": str(fullPath)})
-
             varList.append(panelGroup)
 
         if len(subDirs) > 0:
             for i in subDirs:
                 subDirPath = os.path.join(inputDir, i)
                 items = os.listdir(subDirPath)
+                items.sort()
 
                 storeInfo(subDirPath, items, i)
         else:
@@ -307,8 +310,14 @@ audio.audioLoader(media.effects, audio.effects)
 
 
 lights = LightHandler.Lights(lightCount)
-lights.discover()
-lights.assign()
+
+
+def findLights():
+    lights.discover()
+    lights.assign()
+
+
+findLights()
 
 
 class AudioReadWrite():
@@ -572,6 +581,11 @@ def multiMenuButtons(source, output, hlbg):
 def multiPresetButtons(output, xPos, yPos):
     startX = xPos
     spacing = (sW - startX) / 12
+    rowGap = 100
+    colNumber = 0
+    rowNumber = 0
+    buttonCount = 0
+    buttonCol = row1BarCol
     coreSavedFilesRaw = os.listdir("CoreSaved")
     coreSavedFiles = list()
 
@@ -590,29 +604,50 @@ def multiPresetButtons(output, xPos, yPos):
             data = ast.literal_eval(f.read())
         presetName = data["Preset Name"]
 
-        if mode == "create":
-            saveB = top.btn("No Panel", "Save", audBarCol,
+        if colNumber >= 12:
+            rowNumber += 1
+            colNumber = 0
+
+        if buttonCount >= 12:
+            buttonCol = row2BarCol
+
+        xPosition = startX + colNumber * spacing
+        yPosition = yPos + rowNumber * rowGap
+
+        if mode == "edit":
+            saveB = top.btn("No Panel", "Save", buttonCol,
                             functools.partial(audioRdWrt.saveAudSel, fileName))
-            loadB = top.btn("No Panel", presetName, audBarCol,
+            loadB = top.btn("No Panel", presetName, buttonCol,
                             functools.partial(audioRdWrt.loadAudSel,
                                               audio, fileName))
 
             output.presetB.append({"SaveB": saveB, "LoadB": loadB})
-            output.presetB[i]["SaveB"].place(x=startX + spacing * i,
-                                             y=yPos - 12)
+            output.presetB[i]["SaveB"].place(x=xPosition,
+                                             y=yPosition - 12)
             output.presetB[i]["SaveB"].config(width=10)
-            output.presetB[i]["LoadB"].place(x=startX + spacing * i,
-                                             y=yPos + 11)
+            output.presetB[i]["LoadB"].place(x=xPosition,
+                                             y=yPosition + 11)
             output.presetB[i]["LoadB"].config(width=10)
+
+            colNumber += 1
+            buttonCount += 1
 
         elif mode == "game":
-            loadB = top.btn("No Panel", presetName, audBarCol,
-                            functools.partial(audioRdWrt.loadAudSel,
-                                              audio, fileName))
+            if len(data["Data"]) > 0:
+                loadB = top.btn("No Panel", presetName, buttonCol,
+                                functools.partial(audioRdWrt.loadAudSel,
+                                                  audio, fileName))
 
-            output.presetB.append({"LoadB": loadB})
-            output.presetB[i]["LoadB"].place(x=startX + spacing * i, y=yPos)
-            output.presetB[i]["LoadB"].config(width=10)
+                output.presetB.append({"LoadB": loadB})
+                output.presetB[i]["LoadB"].place(x=xPosition, y=yPosition)
+                output.presetB[i]["LoadB"].config(width=10)
+
+                colNumber += 1
+                buttonCount += 1
+
+    output.text(xPos - 50, yPos + 11, "Sound", soundTCol)
+    if buttonCount > 12:
+        output.text(xPos - 50, yPos + rowGap + 11, "Sound", soundTCol)
 
 
 def multiControlBoxes(output, audInst, audioList):
@@ -654,9 +689,11 @@ def multiSceneButtons(output, xPos, yPos):
     coreLightFiles = list()
     startX = xPos
     spacing = (sW - startX) / 12
-    rowGap = 50
+    rowGap = 100
     colNumber = 0
     rowNumber = 0
+    buttonCount = 0
+    buttonCol = row1BarCol
 
     if lights.lightSetup == "Home":
         subDir = os.path.join("CoreLights", "All")
@@ -689,17 +726,31 @@ def multiSceneButtons(output, xPos, yPos):
             rowNumber += 1
             colNumber = 0
 
+        if buttonCount >= 12:
+            buttonCol = row2BarCol
+
         xPosition = startX + colNumber * spacing
         yPosition = yPos + rowNumber * rowGap
 
-        loadB = top.btn("No Panel", sceneName, ltBarCol,
-                        functools.partial(lightRdWrt.loadScene, fileName))
+        lightsUsed = 0
+        for j in range(0, len(data["Data"])):
+            if data["Data"][j]["state"] == "on":
+                lightsUsed += 1
 
-        output.sceneB.append({"LoadB": loadB})
-        output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
-        output.sceneB[i]["LoadB"].config(width=10)
+        if lightsUsed > 0:
+            loadB = top.btn("No Panel", sceneName, buttonCol,
+                            functools.partial(lightRdWrt.loadScene, fileName))
 
-        colNumber += 1
+            output.sceneB.append({"LoadB": loadB})
+            output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
+            output.sceneB[i]["LoadB"].config(width=10)
+
+            colNumber += 1
+            buttonCount += 1
+
+    output.text(xPos - 50, yPos + 11, "Lights", lightTCol)
+    if buttonCount > 12:
+        output.text(xPos - 50, yPos + rowGap + 11, "Lights", lightTCol)
 
 
 # Top canvas
@@ -707,6 +758,7 @@ top = Display()
 top.newFrCan(0, 0, sW, space * 6, topCol)
 
 # Top master bar
+top.rect(0, 0, sW, space, topCol)
 top.text(50, 25, "Master", topTCol)
 playPreset = top.btn("No Panel", "Play", topCol, audioRdWrt.playAudSel)
 playPreset.place(x=100, y=15)
@@ -720,17 +772,25 @@ clearPreset.config(width=8)
 stopAll = top.btn("No Panel", "Silence!", topCol, audio.stopAll)
 stopAll.place(x=400, y=15)
 stopAll.config(width=8)
+fixLights = top.btn("No Panel", "Fix Lights", topCol, findLights)
+fixLights.place(x=sW - 150, y=15)
+fixLights.config(width=10)
 
+
+top.rect(0, space, sW, space * 2, row1BarCol)
+top.rect(0, space * 3, sW, space * 2, row2BarCol)
 
 # Top sound bar
-top.rect(0, space, sW, space * 2, audBarCol)
-top.text(50, 75, "Sound", audTBarCol)
-multiPresetButtons(top, 100, 65)
+multiPresetButtons(top, 100, 75)
 
 # Top light bar
-top.rect(0, space * 2, sW, space, ltBarCol)
-top.text(50, 125, "Lights", ltTBarCol)
-multiSceneButtons(top, 100, 115)
+lightBarYPos = 105
+if mode == "edit":
+    lightBarYPos += 4
+
+multiSceneButtons(top, 100, lightBarYPos)
+
+
 
 # Top events bar
 # top.rect(0, space * 4, sW, space, evntBarCol)

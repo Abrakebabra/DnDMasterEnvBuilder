@@ -229,7 +229,7 @@ class Display():
         return tk.Button(self.c[panel], text=words,
                          highlightbackground=hlbg, command=action)
 
-    def controlPanel(self, xPos, yPos, lightName, panel):
+    def controlPanel(self, xPos, yPos, lightClsObj, lightName, panel):
         global sW
         global sH
 
@@ -285,14 +285,46 @@ class Display():
         entryTemp = tk.Entry(self.c[panel], width=5)
         entryTemp.place(x=xPos + col2, y=yPos + row2)
 
-        on = self.btn(panel, "On", "slate gray",
-                      functools.partial(lights.on, lightName))
+        def update():
+            for i in range(0, len(lightClsObj.lt)):
+                lt = lightClsObj.lt[i]
+                if lt["Light Name"] == lightName:
+                    if lt["state"] == "off":
+                        entryH.delete(0, 100)
+                        entryS.delete(0, 100)
+                        entryBr.delete(0, 100)
+                        entryTemp.delete(0, 100)
+                    elif lt["state"] == "on":
+                        if lt["mode"] == "hsv":
+                            entryH.delete(0, 100)
+                            entryH.insert(0, lt["h"])
+                            entryS.delete(0, 100)
+                            entryS.insert(0, lt["s"])
+                            entryBr.delete(0, 100)
+                            entryBr.insert(0, lt["brightness"])
+                            entryTemp.delete(0, 100)
+                        elif lt["mode"] == "temp":
+                            entryH.delete(0, 100)
+                            entryS.delete(0, 100)
+                            entryBr.delete(0, 100)
+                            entryBr.insert(0, lt["brightness"])
+                            entryTemp.delete(0, 100)
+                            entryTemp.insert(0, lt["temp"])
+
+        def onUpdate():
+            lights.on(lightName)
+            update()
+
+        def offUpdate():
+            lights.off(lightName)
+            update()
+
+        on = self.btn(panel, "On", "slate gray", onUpdate)
         on.place(x=xPos + colL,
                  y=yPos + row3)
         on.config(width=5)
 
-        off = self.btn(panel, "Off", "slate gray",
-                       functools.partial(lights.off, lightName))
+        off = self.btn(panel, "Off", "slate gray", offUpdate)
         off.place(x=xPos + colR,
                   y=yPos + row3)
         off.config(width=5)
@@ -310,6 +342,7 @@ class Display():
                         return
             lights.updateHSV(lightName, h, s, v)
             lights.sendSettings()
+            update()
 
         def sendTemp(lightName):
             for i in range(0, len(self.controlBox)):
@@ -323,6 +356,7 @@ class Display():
                         return
             lights.updateTemp(lightName, temp, bright)
             lights.sendSettings()
+            update()
 
         setHSV = self.btn(panel, "Set HSV", "slate gray",
                           functools.partial(sendHSV, lightName))
@@ -389,7 +423,8 @@ class Display():
 
                 elif light["mode"] == "hsv":
                     col1Brt = 75 + light["brightness"] / 4
-                    col1 = colConv.hsvRGB(light["h"], light["s"], col1Brt)
+                    col1Sat = 25 + light["s"] * 0.75
+                    col1 = colConv.hsvRGB(light["h"], col1Sat, col1Brt)
                     colComp = 359 - abs(light["h"] - 180)
                     col2 = colConv.hsvRGB(colComp, 100, 100)
                     col1Hex = colConv.rgbHex(col1[0], col1[1], col1[2])
@@ -398,6 +433,37 @@ class Display():
                         ctrlBox = self.controlBox[j]
                         if light["Light Name"] == ctrlBox["Light Name"]:
                             colChange(ctrlBox, j, col1Hex, col2Hex)
+
+    def loadRWVal(self, lightClsObj, ctrlCanvas, fileName):
+        lightRdWrt.loadScene(fileName)
+
+        for i in range(0, len(lightClsObj.lt)):
+            lt = lightClsObj.lt[i]
+
+            for j in range(0, len(ctrlCanvas.controlBox)):
+                ctrlB = ctrlCanvas.controlBox[j]
+                if lt["Light Name"] == ctrlB["Light Name"]:
+                    if lt["state"] == "off":
+                        ctrlB["entryH"].delete(0, 100)
+                        ctrlB["entryS"].delete(0, 100)
+                        ctrlB["entryBr"].delete(0, 100)
+                        ctrlB["entryTemp"].delete(0, 100)
+                    elif lt["state"] == "on":
+                        if lt["mode"] == "hsv":
+                            ctrlB["entryH"].delete(0, 100)
+                            ctrlB["entryH"].insert(0, lt["h"])
+                            ctrlB["entryS"].delete(0, 100)
+                            ctrlB["entryS"].insert(0, lt["s"])
+                            ctrlB["entryBr"].delete(0, 100)
+                            ctrlB["entryBr"].insert(0, lt["brightness"])
+                            ctrlB["entryTemp"].delete(0, 100)
+                        elif lt["mode"] == "temp":
+                            ctrlB["entryH"].delete(0, 100)
+                            ctrlB["entryS"].delete(0, 100)
+                            ctrlB["entryBr"].delete(0, 100)
+                            ctrlB["entryBr"].insert(0, lt["brightness"])
+                            ctrlB["entryTemp"].delete(0, 100)
+                            ctrlB["entryTemp"].insert(0, lt["temp"])
 
 
 def multiPanel(output):
@@ -461,7 +527,8 @@ def multiSceneButtons(output, xPos, yPos):
             saveB = top.btn("No Panel", "Save", "gray",
                             functools.partial(lightRdWrt.saveScene, fileName))
             loadB = top.btn("No Panel", sceneName, "gray",
-                            functools.partial(lightRdWrt.loadScene, fileName))
+                            functools.partial(top.loadRWVal, lights,
+                                              lightControl, fileName))
 
             output.sceneB.append({"SaveB": saveB, "LoadB": loadB})
             output.sceneB[i]["SaveB"].place(x=xPosition,
@@ -471,15 +538,24 @@ def multiSceneButtons(output, xPos, yPos):
                                             y=yPosition + 15)
             output.sceneB[i]["LoadB"].config(width=10)
 
+            colNumber += 1
+
         elif mode == "safe":
-            loadB = top.btn("No Panel", sceneName, "gray",
-                            functools.partial(lightRdWrt.loadScene, fileName))
+            lightsUsed = 0
+            for j in range(0, len(data["Data"])):
+                if data["Data"][j]["state"] == "on":
+                    lightsUsed += 1
 
-            output.sceneB.append({"LoadB": loadB})
-            output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
-            output.sceneB[i]["LoadB"].config(width=10)
+            if lightsUsed > 0:
+                loadB = top.btn("No Panel", sceneName, "gray",
+                                functools.partial(top.loadRWVal, lights,
+                                                  lightControl, fileName))
 
-        colNumber += 1
+                output.sceneB.append({"LoadB": loadB})
+                output.sceneB[i]["LoadB"].place(x=xPosition, y=yPosition)
+                output.sceneB[i]["LoadB"].config(width=10)
+
+                colNumber += 1
 
 
 top = Display()
@@ -542,18 +618,17 @@ expl = top.text((sW / 2),
                 "aquamarine", "No Panel")
 
 
-multiSceneButtons(top, sW * 0.02, sH * 0.7)
-
-
 lightControl = Display()
 multiPanel(lightControl)
 
-lightControl.controlPanel(0, 0, "clip1", "0")
-lightControl.controlPanel(0, 0, "clip2", "1")
-lightControl.controlPanel(0, 0, "clip3", "2")
-lightControl.controlPanel(0, 0, "standHigh", "3")
-lightControl.controlPanel(0, 0, "standMid", "4")
-lightControl.controlPanel(0, 0, "standLow", "5")
+lightControl.controlPanel(0, 0, lights, "clip1", "0")
+lightControl.controlPanel(0, 0, lights, "clip2", "1")
+lightControl.controlPanel(0, 0, lights, "clip3", "2")
+lightControl.controlPanel(0, 0, lights, "standHigh", "3")
+lightControl.controlPanel(0, 0, lights, "standMid", "4")
+lightControl.controlPanel(0, 0, lights, "standLow", "5")
+
+multiSceneButtons(top, sW * 0.02, sH * 0.7)
 
 
 def checkStatus():
