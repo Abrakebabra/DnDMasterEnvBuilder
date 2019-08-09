@@ -1,0 +1,1 @@
+{'Scene Name': 'Scene: 11', 'Data': [{'Light Name': 'clip1', 'state': 'off'}, {'Light Name': 'clip2', 'state': 'off'}, {'Light Name': 'clip3', 'state': 'off'}]}
